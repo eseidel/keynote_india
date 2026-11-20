@@ -31,15 +31,13 @@ const _start = 0.6, _gap = 0.8, _draw = 0.42;
 
 class _TickedListState extends State<TickedList>
     with SingleTickerProviderStateMixin {
-  static const _seconds = 3.0;
+  static const _duration = Duration(milliseconds: 3000);
   late final AnimationController _clock = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 3000),
+    duration: _duration,
   )..forward();
 
-  late final _ticks = [
-    for (var i = 0; i < widget.items.length; i++) _Tick(math.Random(29 + i)),
-  ];
+  var _ticks = const <_Tick>[];
 
   @override
   void dispose() {
@@ -54,8 +52,24 @@ class _TickedListState extends State<TickedList>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _layOut();
+  }
+
+  @override
+  void didUpdateWidget(TickedList old) {
+    super.didUpdateWidget(old);
+    _layOut(); // new items or size, e.g. on hot reload
+  }
+
+  void _layOut() {
     final scaler = MediaQuery.textScalerOf(context);
     _widths = [for (final item in widget.items) _measure(item, scaler)];
+    if (_ticks.length != widget.items.length) {
+      _ticks = [
+        for (var i = 0; i < widget.items.length; i++)
+          _Tick(math.Random(29 + i)),
+      ];
+    }
   }
 
   double _measure(String item, TextScaler scaler) {
@@ -83,7 +97,7 @@ class _TickedListState extends State<TickedList>
               child: AnimatedBuilder(
                 animation: _clock,
                 builder: (context, _) {
-                  final t = _clock.value * _seconds;
+                  final t = _clock.value * _duration.inMilliseconds / 1000;
                   return CustomPaint(
                     foregroundPainter: _InkPainter(t, _ticks, _widths),
                     child: Column(
@@ -93,6 +107,9 @@ class _TickedListState extends State<TickedList>
                           Padding(
                             padding: EdgeInsets.symmetric(vertical: pad),
                             child: Transform.scale(
+                              // Anchored on the left edge, next to the
+                              // tick, so the nod grows away from it.
+                              alignment: Alignment.centerLeft,
                               scale: 1 + 0.035 * _nod(t, i),
                               child: Text(
                                 item,
@@ -295,6 +312,9 @@ abstract final class _Pen {
     ..lineTo(60, 12)
     ..lineTo(30, 8)
     ..close();
+  static final Path _shadow = Path()
+    ..addPath(_barrel, Offset.zero)
+    ..addPath(_grip, Offset.zero);
   static final Path _nib = Path()
     ..moveTo(0, 0)
     ..quadraticBezierTo(14, -9, 34, -9)
@@ -304,14 +324,22 @@ abstract final class _Pen {
 
   static void paint(Canvas canvas, Offset tip, double lift, double alpha) {
     if (alpha <= 0) return;
-    Paint p(Color c, [double a = 1]) =>
-        Paint()..color = c.withValues(alpha: a * alpha);
+    // While it fades in or out, the pen goes into one layer so it fades as
+    // a single object instead of its overlapping parts showing through.
+    // That is only a few frames; at full alpha it paints directly.
+    final fading = alpha < 1;
+    if (fading) {
+      canvas.saveLayer(
+        Rect.fromCircle(center: tip, radius: 280),
+        Paint()..color = Color.fromRGBO(0, 0, 0, alpha),
+      );
+    }
+    Paint p(Color c, [double a = 1]) => Paint()..color = c.withValues(alpha: a);
     // Its shadow on the page, further off the higher the pen is.
     canvas.save();
     canvas.translate(tip.dx + 10 + 22 * lift, tip.dy + 14 + 26 * lift);
     canvas.rotate(angle);
-    canvas.drawPath(_barrel, p(Colors.black, 0.28 * (1 - 0.5 * lift)));
-    canvas.drawPath(_grip, p(Colors.black, 0.28 * (1 - 0.5 * lift)));
+    canvas.drawPath(_shadow, p(Colors.black, 0.28 * (1 - 0.5 * lift)));
     canvas.restore();
 
     canvas.save();
@@ -338,5 +366,6 @@ abstract final class _Pen {
     );
     canvas.drawCircle(const Offset(23, 0), 2.2, p(const Color(0xFF8A6A1E)));
     canvas.restore();
+    if (fading) canvas.restore();
   }
 }
