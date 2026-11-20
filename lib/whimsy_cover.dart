@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
+import 'layouts.dart';
 import 'theme.dart';
 
 /// The opening cover, while Eric is introduced ("Every tool is up in the
@@ -29,12 +30,26 @@ class _FlutteringCoverState extends State<FlutteringCover>
     duration: const Duration(milliseconds: _totalMs),
   )..forward();
 
-  late final _Words _words = _Words(widget.title, headline(40));
+  _Words? _laidOut;
+
+  /// The words, laid out with the same text scaler the settled Text uses.
+  _Words get _words {
+    // Resolve the style the way Text does: merged into the ambient
+    // DefaultTextStyle (Material 3's spreads leading evenly) and scaled.
+    final scaler = MediaQuery.textScalerOf(context);
+    final style = DefaultTextStyle.of(context).style.merge(headline(40));
+    final words = _laidOut;
+    if (words != null && words.scaler == scaler && words.style == style) {
+      return words;
+    }
+    words?.dispose();
+    return _laidOut = _Words(widget.title, style, scaler);
+  }
 
   @override
   void dispose() {
     _clock.dispose();
-    _words.dispose();
+    _laidOut?.dispose();
     super.dispose();
   }
 
@@ -74,7 +89,7 @@ class _FlutteringCoverState extends State<FlutteringCover>
                   ),
                 );
               },
-              child: _Byline(widget.byline),
+              child: BylineCard(widget.byline),
             ),
           ],
         ),
@@ -83,38 +98,13 @@ class _FlutteringCoverState extends State<FlutteringCover>
   }
 }
 
-/// The byline card, as [Cover] draws it.
-class _Byline extends StatelessWidget {
-  const _Byline(this.lines);
-  final List<String> lines;
-
-  @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 24),
-    decoration: BoxDecoration(
-      color: const Color(0xFFFFFFFF).withValues(alpha: 0.06),
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(
-        color: const Color(0xFFFFFFFF).withValues(alpha: 0.12),
-      ),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(lines.first, style: zalando(17, weight: 700)),
-        for (final line in lines.skip(1))
-          Text(line, style: zalando(16, color: Palette.soft)),
-      ],
-    ),
-  );
-}
-
 /// One word in the breeze: its painter, where the title's layout puts it,
 /// and its flight (all seeded, so every run and every golden is the same).
 class _Word {
   _Word(this.painter, this.home, this.land, this.reach, this.bob, this.phase);
   final TextPainter painter;
-  final Offset home; // top left, in the title's coordinates
+  final Offset
+  home; // where its painter's origin goes, in the title's coordinates
   final double land; // seconds: when it settles
   final double reach; // how far right of home it starts (off the slide)
   final double bob; // up-and-down amplitude
@@ -131,10 +121,11 @@ class _Petal {
 const _rightEdge = 1920.0 - 288;
 
 class _Words {
-  _Words(String text, TextStyle style) {
+  _Words(String text, this.style, this.scaler) {
     final line = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
+      textScaler: scaler,
     )..layout();
     size = line.size;
     final rng = math.Random(7);
@@ -145,14 +136,24 @@ class _Words {
             TextSelection(baseOffset: m.start, extentOffset: m.end),
           )
           .first;
+      final word = m.group(0)!;
       final painter = TextPainter(
-        text: TextSpan(text: m.group(0), style: style),
+        text: TextSpan(text: word, style: style),
         textDirection: TextDirection.ltr,
+        textScaler: scaler,
       )..layout();
+      // The word's own painter has its own leading (the box can start above
+      // its origin), so line its glyphs up with the paragraph's, not its
+      // origin with the paragraph's box: the hand-off to Text is then exact.
+      final own = painter
+          .getBoxesForSelection(
+            TextSelection(baseOffset: 0, extentOffset: word.length),
+          )
+          .first;
       words.add(
         _Word(
           painter,
-          Offset(box.left, box.top),
+          Offset(box.left - own.left, box.top - own.top),
           // In reading order, with a little jitter so it isn't mechanical.
           // Each word blows in from the right and lands left of the words
           // still in the air, so a flying word never crosses a landed one.
@@ -179,6 +180,8 @@ class _Words {
     }
   }
 
+  final TextStyle style;
+  final TextScaler scaler;
   late final Size size;
   final words = <_Word>[];
   final petals = <_Petal>[];

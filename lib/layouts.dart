@@ -165,23 +165,32 @@ class Cover extends StatelessWidget {
         ],
         if (byline != null) ...[
           const SizedBox(height: 48),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 24),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(byline!.first, style: zalando(17, weight: 700)),
-                for (final line in byline!.skip(1))
-                  Text(line, style: zalando(16, color: Palette.soft)),
-              ],
-            ),
-          ),
+          BylineCard(byline!),
         ],
+      ],
+    ),
+  );
+}
+
+/// The cover's byline card: a name in bold, then a line or two under it.
+class BylineCard extends StatelessWidget {
+  const BylineCard(this.lines, {super.key});
+  final List<String> lines;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 24),
+    decoration: BoxDecoration(
+      color: Colors.white.withValues(alpha: 0.06),
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(lines.first, style: zalando(17, weight: 700)),
+        for (final line in lines.skip(1))
+          Text(line, style: zalando(16, color: Palette.soft)),
       ],
     ),
   );
