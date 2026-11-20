@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'layouts.dart';
 import 'materialize.dart';
 import 'whimsy_amazing.dart';
+import 'whimsy_anyoneread.dart';
 import 'whimsy_approaches.dart';
 import 'whimsy_barriers.dart';
 import 'whimsy_best.dart';
@@ -269,7 +270,7 @@ final List<Slide> deck = [
     notes: 'Without one, every change is coordination: two agents to do the work, a third to keep them in sync.',
   ),
   const Slide(
-    Statement('Anyone can read it'),
+    AnyoneCanRead('Anyone can read it'),
     section: Section.flutter,
     notes: 'Our sales team follows our codebase through agents. Code is how the company coordinates now.',
   ),
