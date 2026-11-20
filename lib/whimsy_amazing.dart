@@ -37,10 +37,12 @@ class _AmazingStatementState extends State<AmazingStatement>
     vsync: this,
     duration: const Duration(milliseconds: _totalMs),
   )..forward();
+  final _painters = _WordPainters();
 
   @override
   void dispose() {
     _clock.dispose();
+    _painters.dispose();
     super.dispose();
   }
 
@@ -86,8 +88,7 @@ class _AmazingStatementState extends State<AmazingStatement>
                             child: CustomPaint(
                               painter: _AmazingPainter(
                                 _clock,
-                                widget.word,
-                                italic,
+                                _painters..update(widget.word, italic),
                               ),
                             ),
                           ),
@@ -125,11 +126,60 @@ const _sparkles = [
   (0.75, 0.45, 12.0, 260),
 ];
 
+/// The word's painters, laid out once rather than every frame: the fill,
+/// and the glow halo at a handful of strengths.
+class _WordPainters {
+  static const _glowSteps = 24;
+  String? _word;
+  TextStyle? _style;
+  TextPainter? _fill;
+  final _halos = <int, TextPainter>{};
+
+  void update(String word, TextStyle style) {
+    if (word == _word && style == _style) return;
+    dispose();
+    _word = word;
+    _style = style;
+  }
+
+  TextPainter get fill => _fill ??= TextPainter(
+    text: TextSpan(text: _word, style: _style),
+    textDirection: TextDirection.ltr,
+  )..layout();
+
+  /// The blurred accent halo for [glow] in 0..1, in [_glowSteps] steps.
+  TextPainter halo(double glow) {
+    final step = (glow * _glowSteps).round();
+    return _halos.putIfAbsent(step, () {
+      final g = step / _glowSteps;
+      return TextPainter(
+        text: TextSpan(
+          text: _word,
+          style: _style!.copyWith(
+            foreground: Paint()
+              ..color = Palette.accent.withValues(alpha: 0.85 * g)
+              ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10 + 18 * g),
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+    });
+  }
+
+  void dispose() {
+    _fill?.dispose();
+    _fill = null;
+    for (final h in _halos.values) {
+      h.dispose();
+    }
+    _halos.clear();
+  }
+}
+
 class _AmazingPainter extends CustomPainter {
-  _AmazingPainter(this.t, this.word, this.style) : super(repaint: t);
+  _AmazingPainter(this.t, this.painters) : super(repaint: t);
   final Animation<double> t;
-  final String word;
-  final TextStyle style;
+  final _WordPainters painters;
 
   static double _ramp(double ms, double a, double b) =>
       ((ms - a) / (b - a)).clamp(0.0, 1.0);
@@ -155,38 +205,21 @@ class _AmazingPainter extends CustomPainter {
         (1 - Curves.easeInOut.transform(_ramp(ms, 1500, 2700)));
 
     canvas.save();
-    final c = Offset(w / 2, h * 0.55);
+    // Pivot on the right edge, so the lift never pushes the word into the
+    // period after it.
+    final c = Offset(w, h * 0.55);
     canvas.translate(c.dx, c.dy);
     canvas.scale(1 + 0.035 * lift);
     canvas.rotate(-0.012 * lift);
     canvas.translate(-c.dx, -c.dy - 10 * lift);
 
-    if (glow > 0) {
-      final halo = TextPainter(
-        text: TextSpan(
-          text: word,
-          style: style.copyWith(
-            foreground: Paint()
-              ..color = Palette.accent.withValues(alpha: 0.85 * glow)
-              ..maskFilter = MaskFilter.blur(BlurStyle.normal, 10 + 18 * glow),
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      halo.paint(canvas, Offset.zero);
-      halo.dispose();
-    }
+    if (glow > 0) painters.halo(glow).paint(canvas, Offset.zero);
 
     // The word, filled white ahead of the band and blue behind it, with a
     // bright edge where the band is.
-    final text = TextPainter(
-      text: TextSpan(text: word, style: style),
-      textDirection: TextDirection.ltr,
-    )..layout();
     final area = (Offset.zero & size).inflate(40);
     canvas.saveLayer(area, Paint());
-    text.paint(canvas, Offset.zero);
-    text.dispose();
+    painters.fill.paint(canvas, Offset.zero);
     final x0 = area.left;
     final x1 = area.right;
     double at(double x) => ((x - x0) / (x1 - x0)).clamp(0.0, 1.0);
@@ -278,5 +311,5 @@ class _AmazingPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_AmazingPainter old) =>
-      old.t != t || old.word != word || old.style != style;
+      old.t != t || old.painters != painters;
 }

@@ -32,7 +32,7 @@ class Approach extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Stack(
     children: [
-      Positioned.fill(bottom: _band + 10, child: text),
+      Positioned.fill(bottom: _bottom + _band + 10, child: text),
       Positioned(
         left: 180,
         right: 180,
@@ -49,6 +49,10 @@ double _span(double t, double begin, double end, [Curve? curve]) {
   return curve == null ? f : curve.transform(f);
 }
 
+/// Laid-out labels, by text and style. They never change except for alpha,
+/// so each is laid out once and faded with a small layer only while fading.
+final _labels = <(String, TextStyle), TextPainter>{};
+
 void _label(
   Canvas canvas,
   String text,
@@ -57,17 +61,24 @@ void _label(
   double alpha = 1,
 }) {
   if (alpha <= 0) return;
-  final tp = TextPainter(
-    text: TextSpan(
-      text: text,
-      style: style.copyWith(
-        color: style.color!.withValues(alpha: style.color!.a * alpha),
-      ),
-    ),
-    textDirection: TextDirection.ltr,
-  )..layout();
-  tp.paint(canvas, center - Offset(tp.width / 2, tp.height / 2));
-  tp.dispose();
+  final tp = _labels.putIfAbsent(
+    (text, style),
+    () => TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: TextDirection.ltr,
+    )..layout(),
+  );
+  final topLeft = center - Offset(tp.width / 2, tp.height / 2);
+  if (alpha >= 1) {
+    tp.paint(canvas, topLeft);
+    return;
+  }
+  canvas.saveLayer(
+    (topLeft & tp.size).inflate(2),
+    Paint()..color = Color.fromRGBO(0, 0, 0, alpha),
+  );
+  tp.paint(canvas, topLeft);
+  canvas.restore();
 }
 
 TextStyle get _caption =>
@@ -147,32 +158,33 @@ class _SharePainter extends CustomPainter {
     for (final (w, start) in _waves.indexed) {
       for (final side in [-1.0, 1.0]) {
         final f = (t - start) / _travel;
-        if (f <= 0 || f >= 1) continue;
+        // The last wave hits the seams while they're flickering: the iOS side
+        // gets through singed, the Android side gets stuck just short of the
+        // seam and stays there.
+        final late = w == _waves.length - 1;
+        final blocked = late && side > 0;
+        if (f <= 0 || (f >= 1 && !blocked)) continue;
         final from = cx + side * coreW / 2;
         final to = cx + side * (reach - cardW / 2);
-        final seamF = 0.5;
-        // The last wave hits the seams while they're flickering: the iOS side
-        // gets through singed, the Android side is stuck at the seam.
-        final late = w == _waves.length - 1;
-        final stuck = late && side > 0 && f > seamF;
-        final along = stuck ? seamF : f;
-        final x = from + (to - from) * along;
-        final burnt = late && f > seamF;
+        final stop = (from + to) / 2 - side * 28;
+        final x = blocked
+            ? math.min(from + (to - from) * f, stop)
+            : from + (to - from) * f;
+        final stuck = blocked && x >= stop;
+        final burnt = late && (f > 0.5 || stuck);
         final color = burnt ? Palette.warn : Palette.accent;
-        final a = stuck ? (1 - (f - seamF) / (1 - seamF)) : 1.0;
-        final jitter = stuck ? math.sin(t * 80) * 4 : 0.0;
+        // It rattles against the seam, then gives up.
+        final jitter = stuck
+            ? math.sin(t * 80) * 4 * (1 - _span(t, start + _travel / 2, 4.3))
+            : 0.0;
         canvas.drawCircle(
           Offset(x + jitter, cy),
           14,
           Paint()
-            ..color = color.withValues(alpha: 0.35 * a)
+            ..color = color.withValues(alpha: 0.35)
             ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10),
         );
-        canvas.drawCircle(
-          Offset(x + jitter, cy),
-          8,
-          Paint()..color = color.withValues(alpha: a),
-        );
+        canvas.drawCircle(Offset(x + jitter, cy), 8, Paint()..color = color);
       }
     }
 
@@ -207,7 +219,14 @@ class _SharePainter extends CustomPainter {
       canvas,
       'SHARED LOGIC',
       Offset(cx, cy + cardH / 2 + 30),
-      _caption.copyWith(color: Color.lerp(Palette.muted, Palette.accent, lit)),
+      // Quantized so the label cache holds at most 11 versions.
+      _caption.copyWith(
+        color: Color.lerp(
+          Palette.muted,
+          Palette.accent,
+          (lit.clamp(0.0, 1.0) * 10).round() / 10,
+        ),
+      ),
       alpha: coreIn.clamp(0.0, 1.0),
     );
   }
@@ -249,7 +268,7 @@ class _SharePainter extends CustomPainter {
     if (t >= f1) {
       heat = 1;
     } else if (t >= f0) {
-      final frame = (t * 24).floor() + (side > 0 ? 7 : 0);
+      final frame = (t * 12).floor() + (side > 0 ? 7 : 0);
       final r = math.Random(frame);
       final progress = (t - f0) / (f1 - f0);
       heat = r.nextDouble() < 0.35 + 0.5 * progress ? 1 : 0.15;
@@ -284,7 +303,7 @@ class _SharePainter extends CustomPainter {
     final plug = Paint()..color = color;
     // While it flickers, the two ends rattle apart.
     final rattle = t >= f0 && t < f1
-        ? math.Random((t * 30).floor() + (side > 0 ? 3 : 0)).nextDouble() * 6
+        ? math.Random((t * 15).floor() + (side > 0 ? 3 : 0)).nextDouble() * 6
         : 0.0;
     for (final s in [-1.0, 1.0]) {
       canvas.drawRRect(

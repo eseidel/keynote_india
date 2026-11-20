@@ -55,7 +55,7 @@ class _ForgetfulWordState extends State<ForgetfulWord>
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: _clock,
     builder: (context, _) {
-      if (!_clock.isAnimating) return Text(widget.word, style: verdictWord);
+      if (_clock.isCompleted) return Text(widget.word, style: verdictWord);
       return CustomPaint(
         size: _glyphs!.size,
         painter: _ForgetPainter(_glyphs!, _clock.value * _total),
@@ -95,15 +95,20 @@ class _ForgetPainter extends CustomPainter {
         blur = 10 * e;
       }
       if (alpha <= 0) continue;
+      final at = Offset(box.left, dy);
+      if (blur <= 0.3) {
+        // Typing or resting: no layer, the alpha is in the glyph's color.
+        g.painter(g.text[k], g.style, alpha).paint(canvas, at);
+        continue;
+      }
+      // Only while evaporating does a letter need its own (blurred) layer.
       canvas.saveLayer(
         box.inflate(40).shift(Offset(0, dy)),
         Paint()
           ..color = Color.fromRGBO(0, 0, 0, alpha)
-          ..imageFilter = blur > 0.3
-              ? ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur)
-              : null,
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur),
       );
-      g.glyph(g.text[k]).paint(canvas, Offset(box.left, dy));
+      g.painter(g.text[k], g.style, 1).paint(canvas, at);
       canvas.restore();
     }
     // The caret: after the last typed letter, blinking while it waits.
@@ -122,17 +127,7 @@ class _ForgetPainter extends CustomPainter {
       }
     }
     // Which session this is, beside the word, fading at the end.
-    final label = TextPainter(
-      text: TextSpan(
-        text: 'SESSION ${session + 1}',
-        style: zalando(
-          16,
-          weight: 700,
-          color: Palette.muted.withValues(alpha: 1 - fadeOut),
-        ).copyWith(letterSpacing: 3),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
+    final label = g.painter('SESSION ${session + 1}', _label, 1 - fadeOut);
     label.paint(
       canvas,
       Offset(
@@ -141,15 +136,21 @@ class _ForgetPainter extends CustomPainter {
             label.computeDistanceToActualBaseline(TextBaseline.alphabetic),
       ),
     );
-    label.dispose();
   }
+
+  static final _label = zalando(
+    16,
+    weight: 700,
+    color: Palette.muted,
+  ).copyWith(letterSpacing: 3);
 
   @override
   bool shouldRepaint(_ForgetPainter old) => old.ms != ms || old.g != g;
 }
 
-/// Each character's box in [text] laid out in [style], one painter per
-/// character to draw it alone, and the whole line's size and baseline.
+/// Each character's box in [text] laid out in [style], the whole line's size
+/// and baseline, and a cache of laid-out painters (one per character, label
+/// and alpha step) so a frame does no text layout.
 class _Glyphs {
   _Glyphs(this.text, this.style) {
     final tp = TextPainter(
@@ -172,12 +173,25 @@ class _Glyphs {
   late final Size size;
   late final double baseline;
   final boxes = <Rect>[];
-  final _painters = <String, TextPainter>{};
+  final _painters = <(String, TextStyle, int), TextPainter>{};
+  static const _steps = 16;
 
-  TextPainter glyph(String char) => _painters[char] ??= TextPainter(
-    text: TextSpan(text: char, style: style),
-    textDirection: TextDirection.ltr,
-  )..layout();
+  /// [s] in [base]'s style with its color's alpha scaled by [alpha], rounded
+  /// to one of [_steps] steps so the painters can be laid out once and kept.
+  TextPainter painter(String s, TextStyle base, double alpha) {
+    final step = (alpha.clamp(0.0, 1.0) * _steps).round();
+    return _painters[(s, base, step)] ??= TextPainter(
+      text: TextSpan(
+        text: s,
+        style: base.copyWith(
+          color: (base.color ?? const Color(0xFF000000)).withValues(
+            alpha: (base.color?.a ?? 1) * step / _steps,
+          ),
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+  }
 
   void dispose() {
     for (final p in _painters.values) {

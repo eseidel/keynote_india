@@ -505,29 +505,6 @@ class Bio extends StatelessWidget {
   );
 }
 
-/// The opening question, answered in three lines.
-class Callback extends StatelessWidget {
-  const Callback({super.key, required this.question, required this.answers});
-  final String question;
-  final List<String> answers;
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(question, style: headline(32)),
-        const SizedBox(height: 70),
-        for (final a in answers)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Text(a, style: headline(40, color: Palette.accent)),
-          ),
-      ],
-    ),
-  );
-}
-
 /// "Two codebases: 3x the bill": every copy must stay in sync with every
 /// other, so links grow as n(n-1)/2. When the slide appears, 2, 3 and 5
 /// copies get their links drawn one at a time, each with a running count

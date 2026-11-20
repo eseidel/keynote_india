@@ -156,7 +156,7 @@ class _CompoundsPainter extends CustomPainter {
           alpha = e;
         }
         // A new line is bright for its day, then greys as it ages.
-        final born = lines.indexWhere((n) => n > k);
+        final born = _Line.all[k].born;
         final age = isNew
             ? 0.0
             : born < d - 1
@@ -165,14 +165,16 @@ class _CompoundsPainter extends CustomPainter {
         final y = size.height - (k + 1) * lh + (lh - barH) / 2 + dy;
         _paintLine(canvas, k, Offset(x + dx, y), cw, barH, alpha, age, d);
       }
-      if (u >= 1) tops.add(Offset(x + cw / 2, size.height - owned * lh));
+      // The curve rides each column's top-left corner, so on the steep last
+      // days it climbs beside the columns rather than across their lines.
+      if (u >= 1) tops.add(Offset(x, size.height - owned * lh));
     }
 
     // The compound curve through the tops of the columns.
     final c = ((t - _Timeline.curveStart) / _Timeline.curve).clamp(0.0, 1.0);
     if (c > 0 && tops.length == days) {
-      // A smooth Catmull-Rom spline a little above the tops.
-      final p = [for (final top in tops) top - const Offset(0, 14)];
+      // A smooth Catmull-Rom spline a little above and left of the tops.
+      final p = [for (final top in tops) top - const Offset(4, 14)];
       final path = Path()..moveTo(p.first.dx, p.first.dy);
       for (var i = 0; i < p.length - 1; i++) {
         final p0 = p[math.max(i - 1, 0)], p1 = p[i], p2 = p[i + 1];
@@ -215,6 +217,8 @@ class _CompoundsPainter extends CustomPainter {
     }
   }
 
+  final _paint = Paint();
+
   /// Line [k] of the codebase: the same indent and tokens in every column it
   /// appears in, since it's the same line, still there.
   void _paintLine(
@@ -227,26 +231,18 @@ class _CompoundsPainter extends CustomPainter {
     double age,
     int day,
   ) {
-    final rng = math.Random(k * 7919 + 13);
-    final indent = [0, 1, 1, 2, 2, 3][rng.nextInt(6)] * w * 0.12;
+    final line = _Line.all[k];
+    final indent = line.indent * w;
     final avail = w - indent;
-    final first = avail * (0.25 + rng.nextDouble() * 0.4);
-    final second = (avail - first - 5) * (0.3 + rng.nextDouble() * 0.7);
-    final hues = [Palette.accent, Palette.statBlue, Palette.text, Palette.soft];
-    final c1 = hues[rng.nextInt(hues.length)];
-    final c2 = hues[rng.nextInt(hues.length)];
-    Color tone(Color c) => Color.lerp(
-      c,
-      Palette.muted.withValues(alpha: 0.45),
-      age,
-    )!.withValues(alpha: alpha * (1 - age * 0.55));
+    final first = avail * line.first;
+    final second = (avail - first - 5) * line.second;
     final r = Radius.circular(h / 2);
     canvas.drawRRect(
       RRect.fromRectAndRadius(
         Rect.fromLTWH(at.dx + indent, at.dy, first, h),
         r,
       ),
-      Paint()..color = tone(c1),
+      _paint..color = _tone(line.c1, alpha, age),
     );
     if (second > h) {
       canvas.drawRRect(
@@ -254,11 +250,63 @@ class _CompoundsPainter extends CustomPainter {
           Rect.fromLTWH(at.dx + indent + first + 5, at.dy, second, h),
           r,
         ),
-        Paint()..color = tone(c2),
+        _paint..color = _tone(line.c2, alpha, age),
       );
     }
   }
 
+  static final _aged = Palette.muted.withValues(alpha: 0.45);
+
+  static Color _tone(Color c, double alpha, double age) {
+    if (age == 0 && alpha == 1) return c;
+    return Color.lerp(
+      c,
+      _aged,
+      age,
+    )!.withValues(alpha: alpha * (1 - age * 0.55));
+  }
+
   @override
   bool shouldRepaint(_CompoundsPainter old) => false;
+}
+
+/// One line of the codebase, the same wherever it appears: its indent and
+/// token widths (as fractions of the column) and colors, and the day it was
+/// written. Worked out once, not per frame.
+class _Line {
+  const _Line(
+    this.born,
+    this.indent,
+    this.first,
+    this.second,
+    this.c1,
+    this.c2,
+  );
+
+  factory _Line.at(int k) {
+    final rng = math.Random(k * 7919 + 13);
+    return _Line(
+      _Timeline.lines.indexWhere((n) => n > k),
+      [0, 1, 1, 2, 2, 3][rng.nextInt(6)] * 0.12,
+      0.25 + rng.nextDouble() * 0.4,
+      0.3 + rng.nextDouble() * 0.7,
+      _hues[rng.nextInt(_hues.length)],
+      _hues[rng.nextInt(_hues.length)],
+    );
+  }
+
+  final int born;
+  final double indent, first, second;
+  final Color c1, c2;
+
+  static final all = [
+    for (var k = 0; k < _Timeline.lines.last; k++) _Line.at(k),
+  ];
+
+  static const _hues = [
+    Palette.accent,
+    Palette.statBlue,
+    Palette.text,
+    Palette.soft,
+  ];
 }
