@@ -6,4 +6,4 @@ The keynote deck as a Flutter app. Content is in `lib/deck.dart`, layouts in `li
     flutter run -d macos --enable-flutter-gpu --dart-define=SLIDE=38  # start at a slide
     flutter test --update-goldens test/render_slides_test.dart     # render every slide to test/goldens/
 
-Keys: → / space / click advance (including builds), ← back, Home/End, N shows speaker notes.
+Keys: → / space / click advance (including builds), ← back, Home/End, N shows speaker notes. On a phone, tap the left third to go back, anywhere else to advance.
