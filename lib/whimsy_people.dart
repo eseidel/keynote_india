@@ -118,7 +118,7 @@ class _BenchPainter extends CustomPainter {
 
   // Timeline (ms).
   static const _peelLen = 420.0; // the corner lifts
-  static const _flyLen = 1500.0; // then it flutters up and away
+  static const _flyLen = 1200.0; // then it flutters up and away
   static const _lean = (1500.0, 2300.0);
   static const _bubbleA = 1900.0, _bubbleB = 2350.0, _bubbleLen = 380.0;
   static const _heart = (2700.0, 3700.0);
@@ -420,8 +420,8 @@ class _BenchPainter extends CustomPainter {
     }
     // The crease between the knees.
     canvas.drawLine(
-      Offset(p.x, _seatY - 6),
-      Offset(p.x, _seatY + 36),
+      Offset(p.x, _seatY + 6),
+      Offset(p.x, _seatY + 26),
       Paint()
         ..color = Color.lerp(p.pants, Colors.black, 0.3)!
         ..strokeWidth = 3
@@ -588,14 +588,15 @@ class _BenchPainter extends CustomPainter {
     canvas.restore();
   }
 
-  // After it lets go: a flutter down and away, turning over, fading out.
+  // After it lets go: it drifts up and away on a breeze, tumbling, fading.
   void _stickerAway(Canvas canvas, _Person p, TextPainter label, double ms) {
     final f = _span(ms, p.peelMs + _peelLen, _flyLen);
-    if (f <= 0 || f >= 1) return;
+    if (f <= 0 || f >= 0.85) return; // gone by then; see the fade below
     final r = _stickerRect(label);
     final pivot = p.side < 0 ? r.topRight : r.topLeft;
-    // Fully there for most of the trip; gone by the end.
-    final a = 1 - math.pow(f, 4).toDouble();
+    // Fades through the trip and is gone by 85% of it (1.94s for iOS),
+    // before "Love this app!" grows over where it's headed.
+    final a = (1 - math.pow(f / 0.85, 3)).clamp(0.0, 1.0).toDouble();
     final e = Curves.easeOut.transform(f);
     // Starts exactly where the peel left it (the bodies don't lean yet),
     // then catches the breeze: up and out past the person's shoulder,
@@ -606,8 +607,9 @@ class _BenchPainter extends CustomPainter {
       _seatY + pivot.dy - 400 * e + 40 * f * f,
     );
     canvas.rotate(p.side * (0.35 + 1.8 * f) + 0.3 * math.sin(f * 10));
-    // The tumble squashes it edge-on and back. Stepped, like the peel.
-    final squash = _step(math.cos(f * 7).abs(), 0.25).clamp(0.25, 1.0);
+    // The tumble squashes it edge-on and back. Smooth: Impeller sizes
+    // glyphs by the larger axis, which stays 1.08 whatever the squash.
+    final squash = math.cos(f * 7).abs().clamp(0.25, 1.0);
     canvas.scale(1.08, 1.08 * squash);
     canvas.translate(-pivot.dx, -pivot.dy);
     _stickerBody(canvas, r, label, 1, alpha: a);
