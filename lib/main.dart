@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -11,6 +10,7 @@ import 'deck.dart';
 import 'layouts.dart';
 import 'materialize.dart' show preloadHelmet;
 import 'shatter.dart';
+import 'snap_web.dart' if (dart.library.io) 'snap_io.dart';
 import 'theme.dart';
 
 void main() {
@@ -24,7 +24,7 @@ class KeynoteApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'FlutterCon India 2026',
+    title: 'Why AI Makes Flutter More Important, Not Less', // the browser tab
     debugShowCheckedModeBanner: false,
     theme: ThemeData.dark(),
     home: const Presenter(),
@@ -92,11 +92,10 @@ class _PresenterState extends State<Presenter> {
       final name = ats.length == 1
           ? snap
           : snap.replaceFirst(RegExp(r'\.png$'), '_$i.png');
-      final out = File('${Directory.systemTemp.path}/$name');
-      out.writeAsBytesSync(bytes!.buffer.asUint8List());
-      debugPrint('SNAP_WRITTEN ${out.path}');
+      final path = writeSnap(name, bytes!.buffer.asUint8List());
+      debugPrint('SNAP_WRITTEN $path');
     }
-    exit(0);
+    quit();
   }
 
   Future<ui.Image> _capture() async {

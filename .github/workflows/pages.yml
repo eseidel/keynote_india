@@ -1,0 +1,49 @@
+# Builds the deck for the web and publishes it to GitHub Pages at
+# https://eseidel.github.io/keynote_india/.
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deploy at a time; a newer push replaces a queued one, but never
+# cancels a deploy that is already running.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          # Matches the Flutter the deck is presented from (Dart 3.14).
+          flutter-version: 3.50.0
+          cache: true
+      - run: flutter --version
+      - run: flutter pub get
+      - run: flutter build web --release --base-href /keynote_india/
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    # Only the deploy job can write Pages.
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
