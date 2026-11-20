@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/widgets.dart';
 
@@ -52,7 +51,7 @@ typedef _Place = ({
 const _places = <_Place>[
   // Desktop: back left, its left edge leaning out past the slide edge.
   (
-    center: Offset(0.165, 0.495),
+    center: Offset(0.15, 0.495),
     width: 0.47,
     aspect: 1685 / 1372,
     yaw: -0.36,
@@ -64,15 +63,15 @@ const _places = <_Place>[
   ),
   // Phones: front and center, nearly square on so they read best.
   (
-    center: Offset(0.515, 0.54),
-    width: 0.42,
+    center: Offset(0.53, 0.54),
+    width: 0.39,
     aspect: 1316 / 1072,
     yaw: 0.0,
     pitch: 0.07,
     roll: -0.03,
     from: Offset(0.0, 0.75),
     startMs: 380,
-    caption: Offset(0.515, 0.985),
+    caption: Offset(0.53, 0.985),
   ),
   // Embedded: back right, bleeding off the right edge.
   (
@@ -105,6 +104,14 @@ class _HopGalleryState extends State<HopGallery>
     vsync: this,
     duration: const Duration(milliseconds: _totalMs),
   )..forward();
+
+  @override
+  void initState() {
+    super.initState();
+    // The layout (_places, _paintOrder) is for exactly three screens; an
+    // extra one would never mount and Dash would silently vanish.
+    assert(widget.items.length == 3, 'HopGallery lays out exactly 3 items');
+  }
 
   @override
   void dispose() {
@@ -201,19 +208,21 @@ class _HopGalleryState extends State<HopGallery>
       );
     }
 
-    // The shadow is the picture's own silhouette, blurred, falling further
-    // and softer while the card is still up in the air.
-    final blur = 10 + 34 * lift;
+    // The shadow is the picture's own silhouette, decoded tiny (40px wide)
+    // and stretched, so bilinear filtering softens it for free: no blur
+    // layer to re-rasterize every frame. It falls further, spreads and
+    // fades while the card is still up in the air.
     final shadow = Transform.translate(
       offset: Offset(0, 16 + 70 * lift),
-      child: ImageFiltered(
-        imageFilter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-        child: ColorFiltered(
-          colorFilter: ColorFilter.mode(
-            const Color(0xFF000000).withValues(alpha: 0.6 - 0.25 * lift),
-            BlendMode.srcIn,
-          ),
-          child: Image.asset(image, fit: BoxFit.fill),
+      child: Transform.scale(
+        scale: 1.03 + 0.08 * lift,
+        child: Image.asset(
+          image,
+          fit: BoxFit.fill,
+          cacheWidth: 40,
+          filterQuality: FilterQuality.low,
+          color: const Color(0xFF000000).withValues(alpha: 0.6 - 0.25 * lift),
+          colorBlendMode: BlendMode.srcIn,
         ),
       ),
     );
