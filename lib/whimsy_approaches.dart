@@ -219,7 +219,14 @@ class _SharePainter extends CustomPainter {
       canvas,
       'SHARED LOGIC',
       Offset(cx, cy + cardH / 2 + 30),
-      _caption.copyWith(color: Color.lerp(Palette.muted, Palette.accent, lit)),
+      // Quantized so the label cache holds at most 11 versions.
+      _caption.copyWith(
+        color: Color.lerp(
+          Palette.muted,
+          Palette.accent,
+          (lit.clamp(0.0, 1.0) * 10).round() / 10,
+        ),
+      ),
       alpha: coreIn.clamp(0.0, 1.0),
     );
   }

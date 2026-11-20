@@ -246,6 +246,7 @@ class _CrowdPainter extends CustomPainter {
     _xforms = Float32List(n * 4);
     _colors = Int32List(n);
     _rects = Float32List(n * 4);
+    _drawRects = Float32List(n * 4);
     _atlas = _sprites();
     // Static: which sprite (part and size) each quad uses.
     var q = 0;
@@ -287,7 +288,7 @@ class _CrowdPainter extends CustomPainter {
 
   late final List<int> _hairy;
   late final List<int> _levels;
-  late final Float32List _xforms, _rects;
+  late final Float32List _xforms, _rects, _drawRects;
   late final Int32List _colors, _rgb;
   late final ui.Image _atlas;
   final _atlasPaint = Paint()..filterQuality = FilterQuality.medium;
@@ -459,15 +460,31 @@ class _CrowdPainter extends CustomPainter {
         hairIndex++;
       }
     }
-    canvas.drawRawAtlas(
-      _atlas,
-      x,
-      _rects,
-      col,
-      BlendMode.modulate,
-      null,
-      _atlasPaint,
-    );
+    // Only people who have stood up go to the atlas: a zero-size quad makes
+    // some renderers (the test renderer) drop the whole draw. Compact in
+    // place, keeping order (bodies, then heads, then hair).
+    final r = _rects, dr = _drawRects;
+    var k = 0;
+    for (var q = 0; q < col.length; q++) {
+      if (x[q * 4] == 0) continue;
+      for (var j = 0; j < 4; j++) {
+        x[k * 4 + j] = x[q * 4 + j];
+        dr[k * 4 + j] = r[q * 4 + j];
+      }
+      col[k] = col[q];
+      k++;
+    }
+    if (k > 0) {
+      canvas.drawRawAtlas(
+        _atlas,
+        Float32List.sublistView(x, 0, k * 4),
+        Float32List.sublistView(dr, 0, k * 4),
+        Int32List.sublistView(col, 0, k),
+        BlendMode.modulate,
+        null,
+        _atlasPaint,
+      );
+    }
     // Shade behind the headline so it reads over the crowd.
     if (ms > 1000) {
       final t = ((ms - 1000) / 1500).clamp(0.0, 1.0);
@@ -508,13 +525,7 @@ class _CrowdPainter extends CustomPainter {
     }
   }
 
-  void _paintTag(
-    Canvas c,
-    _Person p,
-    String label,
-    bool flutter,
-    double t,
-  ) {
+  void _paintTag(Canvas c, _Person p, String label, bool flutter, double t) {
     final tp = _labels.putIfAbsent(
       '$label$flutter',
       () => TextPainter(
