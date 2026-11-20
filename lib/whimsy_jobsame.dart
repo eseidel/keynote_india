@@ -7,9 +7,15 @@ import 'theme.dart';
 /// "Our jobs changed. / And stayed the same.": the first line's letters
 /// jump up and trade places, twice, hopping over and under each other into
 /// anagram gibberish. On the second shuffle three of them miss and drop
-/// onto the line below, which doesn't budge: they bonk off it, squash, and
-/// bounce back up. Then the first line sorts itself back into order. The
-/// second line never moves a pixel. Runs once, settles in about 2.6s.
+/// onto the line below, which doesn't budge: they land on its letters,
+/// squash, and bounce back up. Then the first line sorts itself back into
+/// order. The second line never moves a pixel. Runs once, settles in about
+/// 2.6s.
+///
+/// Slide 59 (whimsy_owning.dart) has a deliberate copy of this shuffle
+/// (`_Letters`, `_ShufflePainter`, minus the drops), so either slide can
+/// land or change on its own. The callback only works if both shuffle the
+/// same way: change one, change the other.
 class JobsSameStatement extends StatefulWidget {
   const JobsSameStatement(this.text, {super.key, this.size = 50});
 
@@ -31,24 +37,51 @@ class _JobsSameStatementState extends State<JobsSameStatement>
   )..forward();
 
   late final List<String> _lines = widget.text.split('\n');
-  late final TextStyle _style = headline(widget.size);
-  late final _Letters _letters = _Letters(
-    _lines[0],
-    _lines[1],
-    _style,
-    pt(widget.size) * 0.3,
-  );
+  _Letters? _letters;
+  (TextStyle, TextScaler)? _builtFor;
+
+  /// Whether line one's letters are off their spots (the painter draws
+  /// them) or at rest (the Text does).
+  bool _moving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _clock.addListener(() {
+      final moving = _ShufflePainter.moving(_clock.value * _totalMs);
+      if (moving != _moving) setState(() => _moving = moving);
+    });
+  }
+
+  /// Measures with exactly what the `Text`s get: the inherited default
+  /// style merged with the headline style, and the text scale.
+  void _measure(BuildContext context) {
+    final style = DefaultTextStyle.of(context).style
+        .merge(headline(widget.size));
+    final scaler = MediaQuery.textScalerOf(context);
+    if (_builtFor == (style, scaler)) return;
+    _builtFor = (style, scaler);
+    _letters?.dispose();
+    _letters = _Letters(
+      _lines[0],
+      _lines[1],
+      style,
+      scaler,
+      pt(widget.size) * 0.3,
+    );
+  }
 
   @override
   void dispose() {
     _clock.dispose();
-    _letters.dispose();
+    _letters?.dispose();
     super.dispose();
   }
 
   // Same layout as Statement: two centered lines with the same padding.
   @override
   Widget build(BuildContext context) {
+    _measure(context);
     final pad = pt(widget.size) * 0.3;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 160),
@@ -58,9 +91,19 @@ class _JobsSameStatementState extends State<JobsSameStatement>
           children: [
             Padding(
               padding: EdgeInsets.symmetric(vertical: pad),
+              // At rest the line is the real Text, pixel for pixel what
+              // Statement draws; while it shuffles, the painter draws the
+              // letters (and the hits) and the Text is hidden.
               child: CustomPaint(
-                size: _letters.size,
-                painter: _ShufflePainter(_clock, _letters),
+                foregroundPainter: _ShufflePainter(_clock, _letters!),
+                child: Opacity(
+                  opacity: _moving ? 0 : 1,
+                  child: Text(
+                    _lines[0],
+                    textAlign: TextAlign.center,
+                    style: headline(widget.size),
+                  ),
+                ),
               ),
             ),
             Padding(
@@ -68,7 +111,7 @@ class _JobsSameStatementState extends State<JobsSameStatement>
               child: Text(
                 _lines[1],
                 textAlign: TextAlign.center,
-                style: _style,
+                style: headline(widget.size),
               ),
             ),
           ],
@@ -82,14 +125,16 @@ class _JobsSameStatementState extends State<JobsSameStatement>
 /// it, plus the shuffle plan: two seeded permutations of the letter slots,
 /// and which letters fall onto line two.
 class _Letters {
-  _Letters(String text, String below, TextStyle style, double pad)
+  _Letters(String text, String below, TextStyle style, this.scaler, double pad)
     : line = TextPainter(
         text: TextSpan(text: text, style: style),
         textDirection: TextDirection.ltr,
+        textScaler: scaler,
       )..layout(),
       under = TextPainter(
         text: TextSpan(text: below, style: style),
         textDirection: TextDirection.ltr,
+        textScaler: scaler,
       )..layout() {
     for (var i = 0; i < text.length; i++) {
       if (text[i] == ' ') continue;
@@ -101,8 +146,15 @@ class _Letters {
           .toRect();
       glyphs.add((
         TextPainter(
-          text: TextSpan(text: text[i], style: style),
+          // No letterSpacing on a lone letter: the paragraph puts the
+          // spacing after each letter, inside its box, and a lone letter
+          // with it would sit a pixel off its box.
+          text: TextSpan(
+            text: text[i],
+            style: style.copyWith(letterSpacing: 0),
+          ),
           textDirection: TextDirection.ltr,
+          textScaler: scaler,
         )..layout(),
         box,
       ));
@@ -111,7 +163,7 @@ class _Letters {
     final r = math.Random(51);
     first = _packed(text, style, _derange(n, r));
     second = _packed(text, style, _derange(n, r));
-    delays = [for (var i = 0; i < n; i++) r.nextDouble() * 90];
+    delays = [for (var i = 0; i < n; i++) r.nextDouble() * _maxDelay];
     // Each letter's ink bottom below its box top: the baseline, or lower
     // for g and j.
     final lm = line.computeLineMetrics().first;
@@ -187,6 +239,7 @@ class _Letters {
     final tp = TextPainter(
       text: TextSpan(text: buf.toString(), style: style),
       textDirection: TextDirection.ltr,
+      textScaler: scaler,
     )..layout();
     final dx = (line.width - tp.width) / 2;
     final centers = [
@@ -221,6 +274,7 @@ class _Letters {
   }
 
   final TextPainter line, under;
+  final TextScaler scaler;
   final glyphs = <(TextPainter, Rect)>[];
 
   /// Letter i's center x after the first and second shuffles.
@@ -244,6 +298,9 @@ class _Letters {
 /// fall). j, g, d.
 const _drops = {3: 1000.0, 11: 1080.0, 13: 1160.0};
 const _fallMs = 300.0;
+
+/// Letters start each move up to this many ms apart.
+const _maxDelay = 90.0;
 
 class _ShufflePainter extends CustomPainter {
   _ShufflePainter(this.t, this.l) : super(repaint: t);
@@ -269,9 +326,13 @@ class _ShufflePainter extends CustomPainter {
     return Offset(a + d * p, -d.sign * h * math.sin(math.pi * p));
   }
 
+  /// Before the first hop and once the last letter is home, nothing moves.
+  static bool moving(double ms) => ms > _one.$1 && ms < _home.$2 + _maxDelay;
+
   @override
   void paint(Canvas canvas, Size size) {
     final ms = t.value * _totalMs;
+    if (!moving(ms)) return; // the Text is showing
     final n = l.glyphs.length;
 
     for (var i = 0; i < n; i++) {
