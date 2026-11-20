@@ -617,3 +617,128 @@ class ProsCons extends StatelessWidget {
     );
   }
 }
+
+/// A brick foundation that lays itself, course by course from the bottom,
+/// each brick dropping into place. Drawn by Flutter, no image.
+class BrickFoundation extends StatefulWidget {
+  const BrickFoundation({super.key});
+
+  @override
+  State<BrickFoundation> createState() => _BrickFoundationState();
+}
+
+class _BrickFoundationState extends State<BrickFoundation>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 2600),
+  )..forward();
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _c,
+    builder: (_, _) =>
+        CustomPaint(painter: _BrickPainter(_c.value), size: Size.infinite),
+  );
+}
+
+class _BrickPainter extends CustomPainter {
+  _BrickPainter(this.t);
+  final double t;
+
+  static const rows = 9, cols = 7, gap = 8.0;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rng = math.Random(9);
+    final bh = (size.height - gap * (rows - 1)) / rows;
+    final bw = (size.width - gap * (cols - 1)) / cols;
+    final total = rows * cols;
+    var n = 0;
+    for (var r = 0; r < rows; r++) {
+      // Bottom course first; odd courses offset by half a brick.
+      final y = size.height - (r + 1) * bh - r * gap;
+      final offset = r.isOdd ? -(bw + gap) / 2 : 0.0;
+      // The lowest two courses are the foundation: heavier, darker stone.
+      final footing = r < 2;
+      for (var c = 0; c <= cols; c++) {
+        var x = offset + c * (bw + gap);
+        var w = bw;
+        if (x < 0) {
+          w += x;
+          x = 0;
+        }
+        if (x + w > size.width) w = size.width - x;
+        if (w <= 4) continue;
+        // Each brick lands in turn; the drop eases out.
+        final start = (n / total) * 0.75;
+        n++;
+        final local = ((t - start) / 0.25).clamp(0.0, 1.0);
+        if (local <= 0) continue;
+        final e = 1 - math.pow(1 - local, 3).toDouble();
+        final dy = (1 - e) * -140;
+        final shade = 0.85 + rng.nextDouble() * 0.3;
+        final base = footing
+            ? const Color(0xFF5B6675)
+            : Color.lerp(
+                const Color(0xFFB4532A),
+                const Color(0xFFD9733F),
+                rng.nextDouble(),
+              )!;
+        final color = Color.from(
+          alpha: e,
+          red: (base.r * shade).clamp(0, 1),
+          green: (base.g * shade).clamp(0, 1),
+          blue: (base.b * shade).clamp(0, 1),
+        );
+        final rect = RRect.fromRectAndRadius(
+          Rect.fromLTWH(x, y + dy, w, bh),
+          const Radius.circular(4),
+        );
+        canvas.drawRRect(rect, Paint()..color = color);
+        // A lit top edge so each brick reads in 3D.
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(x, y + dy, w, bh * 0.16),
+            const Radius.circular(4),
+          ),
+          Paint()..color = Colors.white.withValues(alpha: 0.18 * e),
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BrickPainter old) => old.t != t;
+}
+
+/// Text on the left, any visual on the right.
+class SplitVisual extends StatelessWidget {
+  const SplitVisual({
+    super.key,
+    required this.text,
+    required this.visual,
+    this.size = 60,
+  });
+  final String text;
+  final Widget visual;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.fromLTRB(200, 140, 160, 160),
+    child: Row(
+      children: [
+        Expanded(flex: 5, child: Text(text, style: headline(size))),
+        const SizedBox(width: 60),
+        Expanded(flex: 6, child: visual),
+      ],
+    ),
+  );
+}
