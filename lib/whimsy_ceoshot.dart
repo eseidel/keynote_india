@@ -248,7 +248,7 @@ class _AppPainter extends CustomPainter {
   // LGTM button.
   static const _field = Rect.fromLTRB(0.0699, 0.1607, 0.8925, 0.2018);
   static const _textLeft = 0.0994;
-  static const _lgtm = Rect.fromLTRB(0.7333, 0.5318, 0.7909, 0.5643);
+  static const _lgtm = Rect.fromLTRB(0.7333, 0.5318, 0.7909, 0.5655);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -304,11 +304,7 @@ class _AppPainter extends CustomPainter {
     final dip = math.sin(math.pi * _phase(ms, 3400, 3650));
     if (dip > 0) {
       canvas.drawRRect(
-        // A pixel taller than the measured rect, to cover its bottom edge.
-        RRect.fromRectAndRadius(
-          Rect.fromLTRB(b.left, b.top, b.right, b.bottom + 1),
-          Radius.circular(b.height / 2),
-        ),
+        RRect.fromRectAndRadius(b, Radius.circular(b.height / 2)),
         Paint()..color = Colors.black.withValues(alpha: 0.4 * dip),
       );
     }
