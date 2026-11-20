@@ -37,7 +37,11 @@ class _HalfMillionState extends State<HalfMillion>
 
   /// Progress 0..1 (an ease-out quartic: fast off the line, a long glide in)
   /// and its rate, in progress per second.
+  ///
+  /// Before the count starts nothing moves, so the rate is 0 (no blur or
+  /// streak on the waiting 000,000).
   static (double, double) _progress(double ms) {
+    if (ms < _startMs) return (0.0, 0.0);
     final x = ((ms - _startMs) / _runMs).clamp(0.0, 1.0);
     final p = 1 - math.pow(1 - x, 4).toDouble();
     final rate = x >= 1 ? 0.0 : 4 * math.pow(1 - x, 3) / (_runMs / 1000);
@@ -185,8 +189,11 @@ class _StreamPainter extends CustomPainter {
     final speed = rate * _scroll; // px per second
     // Brighter while it races, settling to a whisper of texture.
     final appear = (ms / 400).clamp(0.0, 1.0);
-    final alpha = appear * (0.035 + 0.14 * (speed / 70000).clamp(0.0, 1.0));
+    final alpha = appear * (0.02 + 0.14 * (speed / 70000).clamp(0.0, 1.0));
     final streak = (speed / 60).clamp(0.0, _pitch * 3); // px of smear
+    // Keep the bottom strip (slide number, section tracker) clear.
+    canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height - 80));
+    final paint = Paint();
     const columns = 4;
     final colW = size.width / columns;
     final first = (offset / _pitch).floor() - 2;
@@ -195,7 +202,7 @@ class _StreamPainter extends CustomPainter {
       for (var r = 0; r < rows; r++) {
         final n = first + r;
         final y = n * _pitch - offset;
-        if (y < -_pitch * 4 || y > size.height + _pitch) continue;
+        if (y < -_pitch * 4 || y > size.height - 80) continue;
         final rng = math.Random(n * 7919 + c * 104729);
         final indent = rng.nextInt(4);
         final tokens = rng.nextDouble() < 0.12 ? 0 : 1 + rng.nextInt(4);
@@ -209,7 +216,7 @@ class _StreamPainter extends CustomPainter {
               Rect.fromLTWH(x, y, w, _rowH + streak),
               const Radius.circular(6),
             ),
-            Paint()
+            paint
               ..color = color.withValues(
                 alpha: alpha * _rowH / (_rowH + streak * 0.6),
               ),
