@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/widgets.dart';
 
 import 'layouts.dart' show Statement;
@@ -8,9 +6,9 @@ import 'theme.dart';
 /// "“Just prompt native”": the prompt goes out and two native apps print
 /// themselves under the quote, scan line by scan line: an iOS one (Dynamic
 /// Island, large title, tab bar) and an Android one (punch-hole, app bar,
-/// cards, FAB). They sit there being two apps for a beat, then quietly
-/// slide together and become one phone. Most of these stories end up on
-/// portable anyway. The quote itself is the plain statement throughout.
+/// cards, FAB). They lean in toward each other, bonk, and spring back:
+/// two apps, and they stay separate. A shrug pops up between them. The
+/// quote itself is the plain statement throughout.
 class PromptNative extends StatefulWidget {
   const PromptNative(this.text, {super.key});
   final String text;
@@ -19,7 +17,7 @@ class PromptNative extends StatefulWidget {
   State<PromptNative> createState() => _PromptNativeState();
 }
 
-const _totalMs = 3800;
+const _totalMs = 4200;
 
 class _PromptNativeState extends State<PromptNative>
     with SingleTickerProviderStateMixin {
@@ -52,7 +50,8 @@ class _PromptNativeState extends State<PromptNative>
 
 double _seg(double t, double a, double b) => ((t - a) / (b - a)).clamp(0, 1);
 
-/// "iOS" and "Android", laid out once, in a few alpha steps.
+/// "iOS", "Android" and the caption, laid out once, in a few alpha steps;
+/// and the shrug.
 class _Labels {
   final _cache = <(String, int), TextPainter>{};
   static const _steps = 12;
@@ -72,7 +71,16 @@ class _Labels {
     )..layout();
   }
 
+  late final TextPainter shrug = TextPainter(
+    text: TextSpan(
+      text: '🤷',
+      style: TextStyle(fontSize: pt(60)),
+    ),
+    textDirection: TextDirection.ltr,
+  )..layout();
+
   void dispose() {
+    shrug.dispose();
     for (final p in _cache.values) {
       p.dispose();
     }
@@ -113,10 +121,11 @@ class _PhonesPainter extends CustomPainter {
       );
     }
 
-    // They glide together and become one.
-    final merge = Curves.easeInOutCubic.transform(_seg(t, 2.3, 3.2));
-    final become = _seg(t, 3.0, 3.2); // contents swap to the merged app
-    final labelAlpha = _seg(t, 1.4, 1.8) * (1 - _seg(t, 2.2, 2.5));
+    // They lean in toward each other, bonk, and spring back apart.
+    final approach = Curves.easeIn.transform(_seg(t, 2.0, 2.4));
+    final recoil = const ElasticOutCurve(0.4).transform(_seg(t, 2.4, 3.4));
+    final nudge = 70 * approach * (1 - recoil);
+    final labelAlpha = _seg(t, 1.4, 1.8);
 
     for (final (side, kind, start) in [
       (-1.0, _Kind.ios, 0.6),
@@ -125,8 +134,8 @@ class _PhonesPainter extends CustomPainter {
       final print = _seg(t, start, start + 0.8);
       if (print <= 0) continue;
       // A slight lean in toward each other as they slide, upright on arrival.
-      final x = cx + side * apart * (1 - merge);
-      final lean = -side * 0.06 * math.sin(merge * math.pi);
+      final x = cx + side * (apart - nudge);
+      final lean = -side * 0.08 * nudge / 70;
       final rect = Rect.fromLTWH(
         x - phone.width / 2,
         top,
@@ -144,17 +153,7 @@ class _PhonesPainter extends CustomPainter {
       canvas.clipRect(
         Rect.fromLTRB(rect.left - 4, rect.top - 4, rect.right + 4, scanY),
       );
-      // The left phone hides under the right one once merged.
-      if (side < 0 && become >= 1) {
-        canvas.restore();
-        canvas.restore();
-        continue;
-      }
-      // Once together, the right one's app turns into the shared one.
-      _phone(canvas, rect, kind, side > 0 ? 1 - become : 1);
-      if (side > 0 && become > 0) {
-        _phone(canvas, rect, _Kind.one, become, frame: false);
-      }
+      _phone(canvas, rect, kind, 1);
       canvas.restore();
       if (print < 1) {
         final glow = Paint()
@@ -186,25 +185,19 @@ class _PhonesPainter extends CustomPainter {
       }
     }
 
-    // A soft ring as the two become one.
-    final ring = _seg(t, 3.0, 3.7);
-    if (ring > 0 && ring < 1) {
-      final r = RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          cx - phone.width / 2,
-          top,
-          phone.width,
-          phone.height,
-        ).inflate(6 + 40 * Curves.easeOut.transform(ring)),
-        const Radius.circular(30),
-      );
-      canvas.drawRRect(
-        r,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3
-          ..color = Palette.accent.withValues(alpha: 0.6 * (1 - ring)),
-      );
+    // A shrug between them, popping up after the bonk.
+    final shrug = _seg(t, 2.9, 3.5);
+    if (shrug > 0) {
+      final pop = const ElasticOutCurve(0.5).transform(shrug);
+      final c = Offset(cx, top + phone.height * 0.42);
+      canvas.save();
+      canvas.translate(c.dx, c.dy);
+      canvas.scale(pop);
+      final e = labels.shrug;
+      e.paint(canvas, Offset(-e.width / 2, -e.height / 2));
+      canvas.restore();
+      final cap = labels.get('STAY SEPARATE', _seg(t, 3.2, 3.6));
+      cap.paint(canvas, Offset(cx - cap.width / 2, c.dy + 70));
     }
   }
 
