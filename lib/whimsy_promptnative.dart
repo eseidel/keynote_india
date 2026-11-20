@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/widgets.dart';
 
 import 'layouts.dart' show Statement;
@@ -50,8 +52,7 @@ class _PromptNativeState extends State<PromptNative>
 
 double _seg(double t, double a, double b) => ((t - a) / (b - a)).clamp(0, 1);
 
-/// "iOS", "Android" and the caption, laid out once, in a few alpha steps;
-/// and the shrug.
+/// "iOS", "Android" and the caption, laid out once, in a few alpha steps.
 class _Labels {
   final _cache = <(String, int), TextPainter>{};
   static const _steps = 12;
@@ -80,7 +81,6 @@ class _Labels {
   )..layout();
 
   void dispose() {
-    shrug.dispose();
     for (final p in _cache.values) {
       p.dispose();
     }
@@ -193,11 +193,61 @@ class _PhonesPainter extends CustomPainter {
       canvas.save();
       canvas.translate(c.dx, c.dy);
       canvas.scale(pop);
-      final e = labels.shrug;
-      e.paint(canvas, Offset(-e.width / 2, -e.height / 2));
+      // Shoulders go up with the pop, then settle a touch.
+      _shrug(canvas, 1 - 0.3 * _seg(t, 3.5, 3.9));
       canvas.restore();
       final cap = labels.get('STAY SEPARATE', _seg(t, 3.2, 3.6));
       cap.paint(canvas, Offset(cx - cap.width / 2, c.dy + 70));
+    }
+  }
+
+  /// A hand-drawn shrugging person, centered on the origin, ~130 px wide:
+  /// round head with closed happy eyes, shoulders up, forearms out and
+  /// palms up. [lift] raises the shoulders (1 at the top of the shrug).
+  static void _shrug(Canvas canvas, double lift) {
+    final ink = Paint()
+      ..color = Palette.soft
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+    final up = 10 * lift;
+    // Head.
+    canvas.drawCircle(const Offset(0, -24), 22, ink);
+    // Closed eyes, like ^ ^, and a little smile.
+    for (final x in [-8.0, 8.0]) {
+      canvas.drawPath(
+        Path()
+          ..moveTo(x - 5, -24)
+          ..quadraticBezierTo(x, -31, x + 5, -24),
+        ink..strokeWidth = 3.5,
+      );
+    }
+    canvas.drawArc(
+      Rect.fromCircle(center: const Offset(0, -20), radius: 8),
+      0.4,
+      math.pi - 0.8,
+      false,
+      ink,
+    );
+    ink.strokeWidth = 5;
+    // Body.
+    canvas.drawLine(const Offset(0, -2), const Offset(0, 40), ink);
+    // Arms: shoulder up, elbow out and down, forearm up, palm flat.
+    for (final side in [-1.0, 1.0]) {
+      final shoulder = Offset(side * 6, 8 - up);
+      final elbow = Offset(side * 34, 22 - up * 0.4);
+      final hand = Offset(side * 58, 2 - up);
+      canvas.drawPath(
+        Path()
+          ..moveTo(0, 4)
+          ..lineTo(shoulder.dx, shoulder.dy)
+          ..quadraticBezierTo(side * 20, 8 - up, elbow.dx, elbow.dy)
+          ..lineTo(hand.dx, hand.dy)
+          // Palm up.
+          ..relativeLineTo(side * 10, -2),
+        ink,
+      );
     }
   }
 
