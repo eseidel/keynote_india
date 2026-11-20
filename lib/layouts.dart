@@ -563,3 +563,57 @@ class FullBleed3D extends StatelessWidget {
     ],
   );
 }
+
+/// One approach: what it is, an example or two, its upside and downside.
+class ProsCons extends StatelessWidget {
+  const ProsCons({
+    super.key,
+    required this.title,
+    required this.examples,
+    required this.upside,
+    required this.downside,
+  });
+  final String title;
+  final String examples;
+  final String upside;
+  final String downside;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget row(String label, Color color, String text) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 22),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 420,
+            child: Text(
+              label,
+              style: zalando(
+                20,
+                weight: 700,
+                color: color,
+              ).copyWith(letterSpacing: 3),
+            ),
+          ),
+          Expanded(child: Text(text, style: zalando(30, weight: 500))),
+        ],
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 220),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: headline(50)),
+          const SizedBox(height: 12),
+          Text(examples, style: zalando(22, color: Palette.muted)),
+          const SizedBox(height: 50),
+          row('UPSIDE', Palette.accent, upside),
+          row('DOWNSIDE', Palette.warn, downside),
+        ],
+      ),
+    );
+  }
+}

@@ -124,30 +124,9 @@ final List<Slide> deck = [
     section: Section.flutter,
   ),
   const Slide(
-    Statement('Tools built for humans'),
-    section: Section.flutter,
-    notes: 'Flutter was built for humans to drive. What now?',
-  ),
-  const Slide(
     Statement('“Just prompt native”'),
     section: Section.flutter,
-    notes: 'Shopify went native. But most of these stories end up on portable anyway, often one portable stack to another (Discord).',
-  ),
-  const Slide(
-    SectionDivider(eyebrow: 'Flutter', title: 'Why portable matters more'),
-    section: Section.flutter,
-  ),
-  const Slide(
-    ListSlide(
-      items: [
-        '1. Ownership is the cost.',
-        '2. Every copy costs more.',
-        '3. One answer beats two.',
-      ],
-      size: 36,
-    ),
-    section: Section.flutter,
-    notes: 'Three reasons. Number them out loud.',
+    notes: 'Shopify went native. But most of these stories end up on portable anyway, often one portable stack to another (Discord). I think portable matters more now, for three reasons. Straight into the first.',
   ),
 
   // Reason 1
@@ -231,9 +210,17 @@ final List<Slide> deck = [
     notes: 'Our sales team follows our codebase through agents. Code is how the company coordinates now.',
   ),
   const Slide(
-    Statement('One bill. One answer.'),
+    ListSlide(
+      title: 'Why portable matters more',
+      items: [
+        '1. Ownership is the cost.',
+        '2. Every copy costs more.',
+        '3. One answer beats two.',
+      ],
+      size: 36,
+    ),
     section: Section.flutter,
-    notes: "That's portable.",
+    notes: 'The three reasons, summed up. Number them out loud.',
   ),
 
   // Which portable?
@@ -261,7 +248,43 @@ final List<Slide> deck = [
       ],
     ),
     section: Section.flutter,
-    notes: "Three common approaches. Share some business logic: you stop copying that part. Orchestrate native widgets: complexity; how does this button behave? It lives in a system you can't test from your Windows machine. Bring your whole stack: Flutter. Test and verify everything anywhere, even iOS from Linux.",
+    notes: 'Three common approaches. One at a time.',
+  ),
+  const Slide(
+    ProsCons(
+      title: 'Share some logic',
+      examples: 'Kotlin Multiplatform, C++',
+      upside: 'Simple: stop copying that part',
+      downside: 'Two UIs, plus the API and coordination between them',
+    ),
+    section: Section.flutter,
+    notes: 'Share business logic, keep native UIs. You stop copying that part, but you still own two apps and the seam between them.',
+  ),
+  const Slide(
+    ProsCons(
+      title: 'Orchestrate native widgets',
+      examples: 'React Native',
+      upside: 'Easy to adopt; great for brownfield',
+      downside:
+          'Complexity: behavior lives in systems you can’t test everywhere',
+    ),
+    section: Section.flutter,
+    notes: "How does this button behave? It lives in a system you can't test from your Windows machine.",
+  ),
+  const Slide(
+    ProsCons(
+      title: 'Bring your whole stack',
+      examples: 'The web, Flutter, game engines',
+      upside: 'Most portability and control; test anywhere',
+      downside: 'You carry the stack',
+    ),
+    section: Section.flutter,
+    notes: 'Test and verify everything anywhere, even iOS from Linux. The cost: you carry the whole stack, so the stack had better be good.',
+  ),
+  const Slide(
+    Statement('So which stack?'),
+    section: Section.flutter,
+    notes: 'Transition into Flutter. If you carry a stack, carry the best one.',
   ),
   const Slide(
     Statement('Flutter is the best we have.'),
@@ -297,14 +320,24 @@ final List<Slide> deck = [
     shatterOut: true, // the click away breaks the slide like glass
     notes: "This slide is Flutter: Flutter Scene's Materialize demo (fscene.dev), running live inside the deck on Flutter GPU and Impeller. Wireframe, then glass shards, then the full PBR surface. Gorgeous 3D, made easy. Plus serious Windows desktop apps. You can do so much with Flutter that you can't with other systems.",
   ),
-  Slide(
-    SplitImage(
-      text: 'Good bones',
-      image: img('g3f42c810597_1_13.png'),
-      size: 60,
-    ),
+  const Slide(
+    Statement('Good bones'),
     section: Section.flutter,
     notes: 'Good bones are why it scales and why agents thrive on it. Scale: 1M+ apps on Play, nearly a third of new free iOS apps, millions of lines at Google, businesses in this city. Agents: one golden path; a fast loop (hot reload, hot restart, desktop with no emulator); they can see the app (widget, render and accessibility trees).',
+  ),
+  const Slide(
+    ListSlide(
+      title: 'Proven at scale',
+      items: [
+        '1M+ apps on Google Play',
+        'Nearly a third of new free iOS apps',
+        'Millions of lines of Dart at Google',
+        'Google Ads, built in Dart',
+      ],
+      size: 32,
+    ),
+    section: Section.flutter,
+    notes: 'Scale. Google has millions of lines of Dart; its ads product is built in Dart. And businesses in this city.',
   ),
   const Slide(
     Statement('Portable matters more.\nFlutter is how.'),
@@ -316,6 +349,11 @@ final List<Slide> deck = [
   const Slide(
     SectionDivider(eyebrow: 'Flutter', title: 'We’re not done'),
     section: Section.flutter,
+  ),
+  const Slide(
+    Statement('Flutter was built for humans'),
+    section: Section.flutter,
+    notes: 'Built for humans to drive. Now agents drive, and everyone is trying something.',
   ),
   Slide(
     LogoWall(
@@ -400,6 +438,11 @@ final List<Slide> deck = [
     notes: 'Taste, scars, judgment: knowing when the agent is bluffing. I learned what a HyperLogLog was last week, from an agent.',
   ),
   const Slide(
+    Statement('Our jobs changed.\nOwning what we build didn’t.'),
+    section: Section.us,
+    notes: 'Our jobs have changed, and then they haven\'t. We still own the outcome.',
+  ),
+  const Slide(
     Statement('This community can lead'),
     section: Section.us,
     notes: 'Good outcomes, good tools, kindness, going home to play with your kids instead of writing a second platform.',
@@ -425,11 +468,6 @@ final List<Slide> deck = [
     Statement('AI makes Flutter more important, not less', size: 65),
     section: Section.us,
     notes: 'Orders of magnitude more software is coming. Spend it on people, not on copies.',
-  ),
-  const Slide(
-    Statement('Our job is owning what we build'),
-    section: Section.us,
-    notes: 'Takeaway 3, said plainly.',
   ),
   const Slide(
     Statement('Let’s go build the future'),

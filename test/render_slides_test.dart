@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keynote_india/deck.dart';
+import 'package:keynote_india/layouts.dart';
 import 'package:keynote_india/main.dart';
 import 'package:keynote_india/theme.dart';
 
@@ -43,7 +44,7 @@ void main() {
         find.byKey(key),
         matchesGoldenFile('goldens/slide_$n.png'),
       );
-    }, skip: slide.notes.contains('live Flutter Scene'));
+    }, skip: slide.body is FullBleed3D);
   }
   test(
     'font file exists',
