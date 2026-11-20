@@ -26,6 +26,7 @@ import 'whimsy_notreplace.dart';
 import 'whimsy_pixels.dart';
 import 'whimsy_ribbon.dart';
 import 'whimsy_prompt.dart';
+import 'whimsy_responsibility.dart';
 import 'whimsy_scale.dart';
 import 'whimsy_sixty.dart';
 import 'whimsy_software.dart';
@@ -154,7 +155,10 @@ final List<Slide> deck = [
     notes: "For my whole career we packaged data as XML or JSON so software could read it. Now squishy input is fine. The flip side: ask three times, get three answers. Not a compiler, and another reason prompting once for two platforms is weak.",
   ),
   const Slide(
-    Verdicts(items: [(VerdictKind.bad, 'Responsibility')]),
+    Verdicts(
+      items: [(VerdictKind.bad, 'Responsibility')],
+      words: {0: HeavyWord('Responsibility')},
+    ),
     section: Section.ai,
     notes: "Not taste: responsibility. They aren't human and don't exist in the real world. Someone has to own the result.",
   ),
