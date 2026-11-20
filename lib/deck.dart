@@ -30,6 +30,7 @@ import 'whimsy_learners.dart';
 import 'whimsy_learning.dart';
 import 'whimsy_nohands.dart';
 import 'whimsy_notreplace.dart';
+import 'whimsy_owning.dart';
 import 'whimsy_pixels.dart';
 import 'whimsy_suitcase.dart';
 import 'whimsy_ribbon.dart';
@@ -506,7 +507,7 @@ final List<Slide> deck = [
     notes: 'Taste, scars, judgment: knowing when the agent is bluffing. I learned what a HyperLogLog was last week, from an agent.',
   ),
   const Slide(
-    Statement('Our jobs changed.\nOwning what we build didn’t.'),
+    OwningStatement('Our jobs changed.\nOwning what we build didn’t.'),
     section: Section.us,
     notes: 'Our jobs have changed, and then they haven\'t. We still own the outcome.',
   ),
