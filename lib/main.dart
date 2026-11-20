@@ -226,6 +226,8 @@ class _PresenterState extends State<Presenter> {
         focusNode: focus,
         autofocus: true,
         child: GestureDetector(
+          // Opaque: taps in the black bars around the slide count too.
+          behavior: HitTestBehavior.opaque,
           onTapUp: _onTap,
           child: Column(
             children: [
