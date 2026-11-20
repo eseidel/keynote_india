@@ -4,7 +4,7 @@ name: Pages
 
 on:
   push:
-    branches: [main, pages] # TEMP: pages, to test the deploy before merge
+    branches: [main]
   workflow_dispatch:
 
 permissions:
