@@ -1,0 +1,441 @@
+import 'package:flutter/widgets.dart';
+
+import 'layouts.dart';
+import 'voxel_island.dart';
+
+enum Section { ai, flutter, us }
+
+class Slide {
+  const Slide(
+    this.body, {
+    this.notes = '',
+    this.section,
+    this.cover = false,
+    this.builds = 0,
+  });
+  final Widget body;
+  final String notes;
+  final Section? section;
+
+  /// Uses the cover background and hides the section tracker.
+  final bool cover;
+
+  /// Extra clicks spent revealing parts of the slide before advancing.
+  final int builds;
+}
+
+String img(String name) => 'assets/images/$name';
+
+/// FlutterCon India 2026 keynote. Content mirrors the Google Slides deck
+/// (1dFKQm6r3Q3RIv_ttB3FyphjqMJs38al4solWc9C4za8); layouts live in layouts.dart.
+final List<Slide> deck = [
+  // Opening
+  Slide(
+    const Cover(
+      title: 'Why AI Makes Flutter\nMore Important, Not Less',
+      byline: ['Eric Seidel', 'CEO of Shorebird', 'Co-founder of Flutter'],
+    ),
+    cover: true,
+    notes: 'Thanks, Greg. Every tool is up in the air.',
+  ),
+  const Slide(
+    Statement('“Why not prompt once and get two native apps?”', size: 40),
+    notes: "The question going around online. It's wrong, and here's why.",
+  ),
+  Slide(
+    TitleOver(
+      title: 'But first …',
+      size: 40,
+      child: Picture(img('g3f3355e65d4_0_0.png')),
+    ),
+    notes: "Agents writing your code? Haven't typed code in a week? Compare to six months ago. Read the room; lean in or ease off.",
+  ),
+  Slide(
+    Bio(
+      name: 'Eric Seidel',
+      lines: const [
+        'Software Engineer, 20+ years',
+        'Flutter co-founder',
+        'Led Flutter & Dart at Google',
+        'Previously WebKit, Safari, Chrome',
+        'Founder & CEO, Shorebird',
+      ],
+      photo: img('g3f07557751c_0_164.jpg'),
+    ),
+    notes: 'Browsers, then started Flutter, then Shorebird. Decades on making portable the default. Shorebird: one line, booth later.',
+  ),
+  const Slide(
+    ListSlide(title: 'Today', items: ['AI', 'Flutter', 'Us'], size: 40),
+    cover: true,
+    notes: "Today you'll hear about building at scale and AI writing your code. This talk is why it all matters.",
+  ),
+
+  // AI
+  const Slide(
+    SectionDivider(eyebrow: 'AI', title: 'What changed'),
+    section: Section.ai,
+  ),
+  const Slide(
+    Statement('Token prediction\nAt scale\nOn demand', reveal: true),
+    section: Section.ai,
+    builds: 2,
+    notes: 'Not our first transition: PCs, the internet, mobile. "Mary had a little..." An expert at 3am, for pennies.',
+  ),
+  const Slide(
+    Statement('Expert one minute.\nWrong the next.\nEqually confident.'),
+    section: Section.ai,
+    notes: "What people call jagged intelligence. Amazing at some things, terrible at others, and it can't tell which is which.",
+  ),
+  const Slide(
+    Verdicts(
+      items: [(VerdictKind.good, 'Trivia'), (VerdictKind.bad, 'Determinism')],
+    ),
+    section: Section.ai,
+    notes: "Knows every detail of RecyclerView, so you don't have to. But same question three times, three answers: not a compiler. Another reason prompting once for two platforms is weak. (The model itself doesn't learn either; we do that for it with context.)",
+  ),
+  const Slide(
+    Verdicts(items: [(VerdictKind.bad, 'Responsibility')]),
+    section: Section.ai,
+    notes: "Not taste: responsibility. They aren't human and don't exist in the real world. Someone has to own the result.",
+  ),
+  const Slide(
+    Statement('It codes better than I do'),
+    section: Section.ai,
+    notes: '20+ years, and most of the time agents code better than I do. Not true six months ago.',
+  ),
+  const Slide(
+    Statement('Producing code is no longer a human job'),
+    section: Section.ai,
+    notes: '"Computer" used to be a job title. Those people became the first programmers.',
+  ),
+  const Slide(
+    Statement('AI does not replace engineers'),
+    section: Section.ai,
+    notes: "Say it emphatically. I don't write code; I'm responsible for it. The need for engineers is growing.",
+  ),
+
+  // Flutter: does portable still matter?
+  const Slide(
+    SectionDivider(eyebrow: 'Flutter', title: 'Does portable still matter?'),
+    section: Section.flutter,
+  ),
+  const Slide(
+    Statement('Tools built for humans'),
+    section: Section.flutter,
+    notes: 'Flutter was built for humans to drive. What now?',
+  ),
+  const Slide(
+    Statement('“Just prompt native”'),
+    section: Section.flutter,
+    notes: 'Shopify went native. But most of these stories end up on portable anyway, often one portable stack to another (Discord).',
+  ),
+  const Slide(
+    SectionDivider(eyebrow: 'Flutter', title: 'Why portable matters more'),
+    section: Section.flutter,
+  ),
+  const Slide(
+    ListSlide(
+      items: [
+        '1. Ownership is the cost.',
+        '2. Every copy costs more.',
+        '3. One answer beats two.',
+      ],
+      size: 36,
+    ),
+    section: Section.flutter,
+    notes: 'Three reasons. Number them out loud.',
+  ),
+
+  // Reason 1
+  const Slide(
+    SectionDivider(
+      eyebrow: 'Reason 1',
+      title: 'Generation is cheap.\nOwnership isn’t.',
+    ),
+    section: Section.flutter,
+    notes: "Generation is cheap; ownership isn't. Every line you wrote yesterday, you pay for today. Orders of magnitude more code per person per day makes that compounding cost the dominant one.",
+  ),
+  Slide(
+    SplitImage(
+      text: 'Code compounds',
+      image: img('g3f42c810597_1_1.png'),
+      size: 54,
+    ),
+    section: Section.flutter,
+    notes: 'Every line you wrote yesterday, you pay for today: builds, tests, docs, tokens, context.',
+  ),
+  const Slide(
+    Stat(
+      value: '60%',
+      caption:
+          'A unified codebase let SoFi cut roughly a million lines of code',
+    ),
+    section: Section.flutter,
+    notes: "SoFi cut 60% of its code moving to Flutter. Who wouldn't take 60% off their token bill, their CI bill?",
+  ),
+  const Slide(
+    Statement('Half a million lines.\nOne person.\nOne month.'),
+    section: Section.flutter,
+    notes: "Six months ago a whole team at SoFi adding 500K lines a quarter was a lot. Now I do 500K a month, by myself. The point isn't me; it's the tools.",
+  ),
+
+  // Reason 2
+  const Slide(
+    SectionDivider(eyebrow: 'Reason 2', title: 'Every copy costs more'),
+    section: Section.flutter,
+    notes: "Two copies cost more than 2x: there's a third, coordination cost between them.",
+  ),
+  const Slide(
+    Statement('Two copies drift'),
+    section: Section.flutter,
+    notes: "If you found two ways to parse a string in your codebase, you'd delete one. Nobody argues for keeping both. Yet we entertain two completely separate ways to do everything in the app, just because of platforms. Bonkers. That subtle checkout code, copied from Swift to Kotlin: two copies drift. The only fix is to share.",
+  ),
+  const Slide(
+    SyncGraph(text: 'Two codebases:\n3x the bill'),
+    section: Section.flutter,
+    notes: "Google teams moving to Flutter reported moving about 3x faster. The third x was the organization: two copies plus the link between them. Every copy you add has to stay in sync with every other one: three things is a triangle, five is a pentagram. You can build abstractions over them, but that's just sharing code.",
+  ),
+  const Slide(
+    Statement('Verify one thing, not two'),
+    section: Section.flutter,
+    notes: 'Nobody reads the code anymore. Verification is the job, so verify one thing.',
+  ),
+
+  // Reason 3
+  const Slide(
+    SectionDivider(eyebrow: 'Reason 3', title: 'One answer beats two'),
+    section: Section.flutter,
+    notes: "Code isn't for the machines. It's us writing down our intent.",
+  ),
+  const Slide(
+    Statement('Code captures intent'),
+    section: Section.flutter,
+    notes: 'Every piece of intent is the end of an argument. Argue once, build once, maintain once.',
+  ),
+  Slide(
+    TitleOver(
+      title: 'Single source of truth',
+      size: 40,
+      child: Picture(img('g3f42c810597_1_5.png')),
+    ),
+    section: Section.flutter,
+    notes: 'Without one, every change is coordination: two agents to do the work, a third to keep them in sync.',
+  ),
+  const Slide(
+    Statement('Anyone can read it'),
+    section: Section.flutter,
+    notes: 'Our sales team follows our codebase through agents. Code is how the company coordinates now.',
+  ),
+  const Slide(
+    Statement('One bill. One answer.'),
+    section: Section.flutter,
+    notes: "That's portable.",
+  ),
+
+  // Which portable?
+  const Slide(
+    SectionDivider(eyebrow: 'Flutter', title: 'Which portable?'),
+    section: Section.flutter,
+    notes: "Bought into portable? Then which approach. We built Flutter because we'd tried the rest.",
+  ),
+  Slide(
+    SplitImage(
+      text: 'The barriers between stacks are gone',
+      image: img('g3f42c810597_1_6.png'),
+      size: 40,
+    ),
+    section: Section.flutter,
+    notes: "Easy to get into any stack now, so stacks are judged on end quality, agent fit and maintenance. The iOS lead who wouldn't leave Swift isn't the blocker anymore.",
+  ),
+  const Slide(
+    ListSlide(
+      title: 'Three approaches',
+      items: [
+        'Share some logic',
+        'Orchestrate native widgets',
+        'Bring your whole stack',
+      ],
+    ),
+    section: Section.flutter,
+    notes: "Three common approaches. Share some business logic: you stop copying that part. Orchestrate native widgets: complexity; how does this button behave? It lives in a system you can't test from your Windows machine. Bring your whole stack: Flutter. Test and verify everything anywhere, even iOS from Linux.",
+  ),
+  const Slide(
+    Statement('Flutter is the best we have.'),
+    section: Section.flutter,
+    notes: "Flutter has been and remains the best portable software we have. Here's why, structurally.",
+  ),
+  const Slide(
+    Statement('You own every pixel'),
+    section: Section.flutter,
+    notes: 'One renderer, your code, top to bottom. The app looks and behaves the same everywhere, and you can test and verify all of it from one machine. No behavior hides in a system you can\'t see or test. Everything that follows comes from this.',
+  ),
+  Slide(
+    TitleOver(
+      title: 'It goes everywhere',
+      child: Gallery(
+        items: [
+          (img('ev_desk.png'), 'Desktop'),
+          (img('ev_mob.png'), 'iOS and Android'),
+          (img('ev_car.jpg'), 'Cars'),
+        ],
+      ),
+    ),
+    section: Section.flutter,
+    notes: "Because you own the pixels, Flutter goes wherever there's a screen: phones, web, desktop, smart home, cars (that's the 2026 Toyota RAV4's infotainment, shipping now; Lexus ES too), TVs. The same app on screens nobody planned for.",
+  ),
+  const Slide(
+    TitleOver(
+      title: 'You can do more',
+      child: ClipRRect(
+        borderRadius: BorderRadius.all(Radius.circular(16)),
+        child: VoxelIsland(),
+      ),
+    ),
+    section: Section.flutter,
+    notes: "This slide is Flutter: a live Flutter Scene (fscene.dev) world, rendered by Flutter GPU and Impeller inside the deck. Gorgeous 3D, made easy. Plus serious Windows desktop apps. You can do so much with Flutter that you can't with other systems.",
+  ),
+  Slide(
+    SplitImage(
+      text: 'Good bones',
+      image: img('g3f42c810597_1_13.png'),
+      size: 60,
+    ),
+    section: Section.flutter,
+    notes: 'Good bones are why it scales and why agents thrive on it. Scale: 1M+ apps on Play, nearly a third of new free iOS apps, millions of lines at Google, businesses in this city. Agents: one golden path; a fast loop (hot reload, hot restart, desktop with no emulator); they can see the app (widget, render and accessibility trees).',
+  ),
+  const Slide(
+    Statement('Portable matters more.\nFlutter is how.'),
+    section: Section.flutter,
+    notes: 'Recap of the Flutter section.',
+  ),
+
+  // We're not done
+  const Slide(
+    SectionDivider(eyebrow: 'Flutter', title: 'We’re not done'),
+    section: Section.flutter,
+  ),
+  Slide(
+    LogoWall(
+      items: [
+        (img('wall_im0.png'), 'Exact'),
+        (img('wall_im1.png'), 'DartNative'),
+        (img('wall_im2b.png'), 'Discord, rebuilt in Rust'),
+        (img('wall_im3.png'), 'Skip'),
+      ],
+    ),
+    section: Section.flutter,
+    notes: '~10 new portable efforts last quarter. A Cambrian explosion. Few are serious; most are years from Flutter\'s quality.',
+  ),
+  const Slide(
+    Statement('Flutter is good with agents.\n\nIt could be amazing.', size: 40),
+    section: Section.flutter,
+    notes: 'Still designed around humans. It has to be designed soup to nuts around agents, or somebody else will. E.g. faster analyzer, system explained to agents, iOS from Linux productized.',
+  ),
+  const Slide(
+    Statement('We’re working on it'),
+    section: Section.flutter,
+    notes: "That's why Shorebird exists.",
+  ),
+
+  // Us
+  const Slide(
+    SectionDivider(eyebrow: 'Us', title: 'What about the humans?'),
+    section: Section.us,
+    notes: "It's a wild time; we're living in the future. This is a human conference, not an agent conference. It's always about the humans: customers and developers.",
+  ),
+  const Slide(
+    Statement('The engineer’s job changed'),
+    section: Section.us,
+    notes: "First thing in this section. Not the same as three months ago, or a year ago. We don't even have the words yet.",
+  ),
+  const Slide(
+    Statement('A lot more software'),
+    section: Section.us,
+    notes: '10x, 100x, 1000x more software. Software has been eating the world for 20-30 years and will keep on. An insatiable appetite for software, and for people who own it.',
+  ),
+  const Slide(
+    Statement('A lot more developers'),
+    section: Section.us,
+    notes: "Most won't call themselves Flutter developers.",
+  ),
+  const Slide(
+    Statement('The new world is weird'),
+    section: Section.us,
+    notes: "We don't know yet. So many explorations, everyone experimenting. Here's mine.",
+  ),
+  Slide(
+    TitleOver(
+      title: 'This is how I work',
+      size: 32,
+      child: Picture(img('ceo_shot.png')),
+    ),
+    section: Section.us,
+    notes: 'Screenshot. I live in it all day; I just talk to it. ~300K lines, never read the code. This is what makes half a million lines a month possible.',
+  ),
+  const Slide(
+    Statement('Everyone at Shorebird built their own'),
+    section: Section.us,
+    notes: 'Ops, PM, sales. Almost all Flutter and Dart, no mandate.',
+  ),
+  const Slide(
+    Statement('What’s our job now?'),
+    section: Section.us,
+    notes:
+        'A not-so-quiet crisis. We own the technical outcomes. And we learn.',
+  ),
+  const Slide(
+    Quote(
+      text: 'In times of change, learners inherit the earth, while the learned find themselves beautifully equipped to deal with a world that no longer exists.',
+      by: 'Eric Hoffer',
+    ),
+    section: Section.us,
+    notes: 'This conference\'s tagline is "Learning at scale."',
+  ),
+  const Slide(
+    Statement('Your skills still matter'),
+    section: Section.us,
+    notes: 'Taste, scars, judgment: knowing when the agent is bluffing. I learned what a HyperLogLog was last week, from an agent.',
+  ),
+  const Slide(
+    Statement('This community can lead'),
+    section: Section.us,
+    notes: 'Good outcomes, good tools, kindness, going home to play with your kids instead of writing a second platform.',
+  ),
+  Slide(
+    SplitImage(
+      text: 'Build for people, not platforms',
+      image: img('g3f42c810597_1_12.png'),
+      size: 40,
+    ),
+    section: Section.us,
+    notes: 'People, not platforms.',
+  ),
+  const Slide(
+    Callback(
+      question: 'Why not prompt once and get two apps?',
+      answers: ['You’d own two.', 'You’d pay 3x.', 'You’d get two answers.'],
+    ),
+    section: Section.us,
+    notes: 'Callback to the opening question. The three reasons, in a line you can take home: own two, pay 3x, two answers.',
+  ),
+  const Slide(
+    Statement('AI makes Flutter more important, not less', size: 65),
+    section: Section.us,
+    notes: 'Orders of magnitude more software is coming. Spend it on people, not on copies.',
+  ),
+  const Slide(
+    Statement('Our job is owning what we build'),
+    section: Section.us,
+    notes: 'Takeaway 3, said plainly.',
+  ),
+  const Slide(
+    Statement('Let’s go build the future'),
+    section: Section.us,
+    notes: "Enjoy this human conference. Learning is part of what you'll do today.",
+  ),
+  Slide(
+    Cover(title: 'Thank you', logo: img('g3b572bde633_0_186.png')),
+    cover: true,
+    notes: 'Find me after, or at the Shorebird booth. Shorebird OTA talk at 17:35.',
+  ),
+];
