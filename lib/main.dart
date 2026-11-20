@@ -32,7 +32,8 @@ class KeynoteApp extends StatelessWidget {
 }
 
 /// Keys: → / space / PageDown next, ← / PageUp back, Home / End,
-/// N toggles speaker notes. Touch or pen: the left third back, the rest next.
+/// Cmd+← / Cmd+→ first and last slide,
+/// N toggles speaker notes, R replays the current slide's animation. Touch or pen: the left third back, the rest next.
 class Presenter extends StatefulWidget {
   const Presenter({super.key, this.initial = 0});
   final int initial;
@@ -47,6 +48,7 @@ class _PresenterState extends State<Presenter> {
       : widget.initial;
   int step = 0; // builds revealed on the current slide
   bool showNotes = false;
+  int replay = 0; // bumped by R: remounts the slide so its animation reruns
   final focus = FocusNode();
   final boundary = GlobalKey();
   ui.Image? shatter; // outgoing slide, while its glass flies off
@@ -183,7 +185,13 @@ class _PresenterState extends State<Presenter> {
       return KeyEventResult.ignored;
     }
     final k = e.logicalKey;
-    if (k == LogicalKeyboardKey.arrowRight ||
+    // Laptop keyboards have no Home/End: Cmd+← and Cmd+→ do the same.
+    final cmd = HardwareKeyboard.instance.isMetaPressed;
+    if (cmd && k == LogicalKeyboardKey.arrowLeft) {
+      go(0);
+    } else if (cmd && k == LogicalKeyboardKey.arrowRight) {
+      go(deck.length - 1);
+    } else if (k == LogicalKeyboardKey.arrowRight ||
         k == LogicalKeyboardKey.space ||
         k == LogicalKeyboardKey.pageDown) {
       next();
@@ -194,6 +202,11 @@ class _PresenterState extends State<Presenter> {
       go(0);
     } else if (k == LogicalKeyboardKey.end) {
       go(deck.length - 1);
+    } else if (k == LogicalKeyboardKey.keyR) {
+      setState(() {
+        replay++;
+        step = 0;
+      });
     } else if (k == LogicalKeyboardKey.keyN) {
       setState(() => showNotes = !showNotes);
     } else {
@@ -231,7 +244,7 @@ class _PresenterState extends State<Presenter> {
                                     ? Duration.zero
                                     : const Duration(milliseconds: 250),
                                 child: BuildStep(
-                                  key: ValueKey(index),
+                                  key: ValueKey((index, replay)),
                                   step: step,
                                   child: SlideFrame(
                                     slide: slide,

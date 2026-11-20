@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'theme.dart';
+import 'whimsy_bird.dart';
 import 'whimsy_dividers.dart';
 
 /// How many builds of the current slide are showing. Without one (e.g. in
@@ -102,6 +103,7 @@ class Cover extends StatelessWidget {
     this.contact,
   });
   final String title;
+  static const _logoHeight = LandingBird.logoHeight, _logoGap = 24.0;
 
   /// A line under the title, such as an email address.
   final String? contact;
@@ -109,9 +111,11 @@ class Cover extends StatelessWidget {
   final String? logo;
 
   /// Builds a widget over the title, unclipped, in the title's coordinates,
-  /// given the top center of the title's last letter (the Thank you slide's
-  /// bird lands there).
-  final Widget Function(Offset perch)? logoOverlay;
+  /// given the top of the title's last letter (the Thank you slide's bird
+  /// lands there) and the logo's top left. With an overlay, the logo's own
+  /// bird (its left [LandingBird.logoBirdWidth]) is hidden: the overlay's
+  /// bird stands in for it.
+  final Widget Function(Offset perch, Offset logo)? logoOverlay;
 
   /// The title, with [logoOverlay] placed relative to its last letter.
   Widget _withPerch(TextStyle style) {
@@ -136,7 +140,7 @@ class Cover extends StatelessWidget {
       clipBehavior: Clip.none,
       children: [
         Text(title, style: style),
-        logoOverlay!(perch),
+        logoOverlay!(perch, const Offset(0, -(_logoHeight + _logoGap))),
       ],
     );
   }
@@ -148,9 +152,18 @@ class Cover extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (logo != null) ...[
-          Image.asset(logo!, height: 82),
-          const SizedBox(height: 24),
+        if (logo != null && logoOverlay != null) ...[
+          SizedBox(
+            height: _logoHeight,
+            child: ClipRect(
+              clipper: const _ClipLeft(LandingBird.logoBirdWidth),
+              child: Image.asset(logo!, height: _logoHeight),
+            ),
+          ),
+          const SizedBox(height: _logoGap),
+        ] else if (logo != null) ...[
+          Image.asset(logo!, height: _logoHeight),
+          const SizedBox(height: _logoGap),
         ],
         if (logoOverlay == null)
           Text(title, style: headline(logo == null ? 40 : 80))
@@ -185,6 +198,19 @@ class Cover extends StatelessWidget {
       ],
     ),
   );
+}
+
+/// Clips off the left [fraction] of its child.
+class _ClipLeft extends CustomClipper<Rect> {
+  const _ClipLeft(this.fraction);
+  final double fraction;
+
+  @override
+  Rect getClip(Size size) =>
+      Rect.fromLTRB(size.width * fraction, 0, size.width, size.height);
+
+  @override
+  bool shouldReclip(_ClipLeft old) => old.fraction != fraction;
 }
 
 /// Section divider: small accent eyebrow, a short rule, a big title. It

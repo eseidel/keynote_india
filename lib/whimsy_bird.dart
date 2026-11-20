@@ -3,12 +3,26 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-/// Thank you slide: a small shorebird, drawn from the brand logo SVG, flies in from the right along a gentle arc, flapping, and lands
-/// on [perch] (the top of the "u" in "Thank you"). Then it folds its wings
-/// and holds. Positioned in the title's coordinates.
+/// Thank you slide: the bird in the Shorebird logo above the title (drawn
+/// from the brand logo SVG, standing in for the logo's own bird) sits a
+/// beat, crouches, takes off, flaps up and over in an arc, and lands on
+/// [perch] (the right stem of the "u" in "Thank you"), growing a little
+/// as it comes forward. Then it folds its wings and holds. Positioned in
+/// the title's coordinates; [logo] is the logo image's top left there.
 class LandingBird extends StatefulWidget {
-  const LandingBird({super.key, required this.perch});
+  const LandingBird({super.key, required this.perch, required this.logo});
   final Offset perch;
+  final Offset logo;
+
+  /// Where the logo's own bird stands, for a logo [logoHeight] tall: its
+  /// feet, from the logo's top left, and its scale in SVG units.
+  static const logoHeight = 82.0;
+  static const logoFeet = Offset(40, 70);
+  static const logoScale = 0.375;
+
+  /// The logo image's left part, holding its bird, as a fraction of its
+  /// width: hidden, so this bird takes its place.
+  static const logoBirdWidth = 0.215;
 
   @override
   State<LandingBird> createState() => _LandingBirdState();
@@ -18,7 +32,7 @@ class _LandingBirdState extends State<LandingBird>
     with SingleTickerProviderStateMixin {
   late final AnimationController _flight = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 2800),
+    duration: const Duration(milliseconds: 3600),
   )..forward();
 
   @override
@@ -31,42 +45,62 @@ class _LandingBirdState extends State<LandingBird>
   Widget build(BuildContext context) => Positioned(
     left: 0,
     top: 0,
-    child: CustomPaint(painter: _BirdPainter(_flight, widget.perch)),
+    child: CustomPaint(
+      painter: _BirdPainter(
+        _flight,
+        widget.perch,
+        widget.logo + LandingBird.logoFeet,
+      ),
+    ),
   );
 }
 
 class _BirdPainter extends CustomPainter {
-  _BirdPainter(this.t, this.perch) : super(repaint: t);
+  _BirdPainter(this.t, this.perch, this.from) : super(repaint: t);
   final Animation<double> t;
   final Offset perch;
+  final Offset from; // the feet, standing in the logo
 
-  static const flyEnd = 0.82; // fraction of the run spent flying
-  static const scale = 0.4; // the 218-unit-wide SVG bird is ~87 px
+  // Fractions of the run: sit in the logo, crouch, fly, land.
+  static const sitEnd = 0.22, crouchEnd = 0.3, flyEnd = 0.84;
+  static const scale = 0.4; // perched, the 218-unit-wide SVG bird is ~87 px
   static const feet = Offset(162, 237.5); // bottom of the body, SVG units
+
+  static double _ramp(double v, double a, double b) =>
+      ((v - a) / (b - a)).clamp(0.0, 1.0);
 
   @override
   void paint(Canvas canvas, Size size) {
     final v = t.value;
-    final start = perch + const Offset(1100, -520);
-    final control = perch + const Offset(500, -640);
-    final f = Curves.easeOutCubic.transform((v / flyEnd).clamp(0.0, 1.0));
+    final f = Curves.easeInOutCubic.transform(_ramp(v, crouchEnd, flyEnd));
+    // Up and over: the control point sits well above both ends.
+    final control = Offset(
+      (from.dx + perch.dx) / 2,
+      math.min(from.dy, perch.dy) - 320,
+    );
     final u = 1 - f;
-    var at = start * (u * u) + control * (2 * u * f) + perch * (f * f);
-    final flying = v < flyEnd;
-    if (flying) at += Offset(0, math.sin(v * 40) * 8 * (1 - f));
+    var at = from * (u * u) + control * (2 * u * f) + perch * (f * f);
+    final flying = v >= crouchEnd && v < flyEnd;
+    // A little bob with each wingbeat.
+    if (flying) at += Offset(0, math.sin(v * 2 * math.pi * 9) * 6);
 
-    // Wings beat fast in flight, slow on approach, fold once landed.
-    final landing = ((v - flyEnd) / (1 - flyEnd)).clamp(0.0, 1.0);
+    final crouch = math.sin(_ramp(v, sitEnd, crouchEnd) * math.pi);
+    final landing = _ramp(v, flyEnd, 1);
     final flap = flying
-        ? math.sin(v * 2 * math.pi * 9) * (0.3 + 0.7 * (1 - f))
-        : math.sin(landing * math.pi * 2) * 0.25 * (1 - landing);
-    final squash = flying ? 0.0 : math.sin(landing * math.pi) * 0.12;
+        ? math.sin(v * 2 * math.pi * 9) * (0.5 + 0.5 * math.sin(f * math.pi))
+        : v >= flyEnd
+        ? math.sin(landing * math.pi * 2) * 0.25 * (1 - landing)
+        : crouch * -0.15;
+    final squash = v >= flyEnd
+        ? math.sin(landing * math.pi) * 0.12
+        : crouch * 0.14;
+    final s = LandingBird.logoScale + (scale - LandingBird.logoScale) * f;
 
     canvas
       ..save()
       ..translate(at.dx, at.dy)
-      // Faces left, the way it flies in.
-      ..scale(-scale * (1 + squash * 0.5), scale * (1 - squash))
+      // Faces right, as in the logo and the way it flies.
+      ..scale(s * (1 + squash * 0.5), s * (1 - squash))
       ..translate(-feet.dx, -feet.dy);
     _drawBird(canvas, flap);
     canvas.restore();
@@ -159,5 +193,6 @@ class _BirdPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_BirdPainter old) => old.perch != perch;
+  bool shouldRepaint(_BirdPainter old) =>
+      old.perch != perch || old.from != from;
 }
