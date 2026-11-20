@@ -650,7 +650,7 @@ class _BrickFoundationState extends State<BrickFoundation>
     with SingleTickerProviderStateMixin {
   late final AnimationController _c = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: 2600),
+    duration: const Duration(seconds: 12),
   )..forward();
 
   @override
@@ -696,9 +696,9 @@ class _BrickPainter extends CustomPainter {
         if (x + w > size.width) w = size.width - x;
         if (w <= 4) continue;
         // Each brick lands in turn; the drop eases out.
-        final start = (n / total) * 0.75;
+        final start = (n / total) * 0.94;
         n++;
-        final local = ((t - start) / 0.25).clamp(0.0, 1.0);
+        final local = ((t - start) / 0.05).clamp(0.0, 1.0);
         if (local <= 0) continue;
         final e = 1 - math.pow(1 - local, 3).toDouble();
         final dy = (1 - e) * -140;
