@@ -21,6 +21,7 @@ import 'whimsy_learning.dart';
 import 'whimsy_nohands.dart';
 import 'whimsy_pixels.dart';
 import 'whimsy_prompt.dart';
+import 'whimsy_scale.dart';
 import 'whimsy_sixty.dart';
 import 'whimsy_software.dart';
 import 'whimsy_squishy.dart';
@@ -370,7 +371,7 @@ final List<Slide> deck = [
     notes: 'Solid foundations are why it scales and why agents thrive on it. Scale: 1M+ apps on Play, nearly a third of new free iOS apps, millions of lines at Google, businesses in this city. Agents: one golden path; a fast loop (hot reload, hot restart, desktop with no emulator); they can see the app (widget, render and accessibility trees).',
   ),
   const Slide(
-    ListSlide(
+    ScaleList(
       title: 'Proven at scale',
       items: [
         '1M+ apps on Google Play',
