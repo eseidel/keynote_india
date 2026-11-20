@@ -56,17 +56,76 @@ class _BarriersState extends State<Barriers>
     vsync: this,
     duration: const Duration(milliseconds: _BarriersPainter.totalMs),
   )..forward();
+  final _cache = _BarriersCache();
 
   @override
   void dispose() {
     _clock.dispose();
+    _cache.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => IgnorePointer(
-    child: CustomPaint(painter: _BarriersPainter(_clock), size: Size.infinite),
+    child: CustomPaint(
+      painter: _BarriersPainter(_clock, _cache),
+      size: Size.infinite,
+    ),
   );
+}
+
+/// What the painter keeps between frames: the wall labels, laid out once per
+/// alpha step (so fading pieces carry their alpha in the text color instead
+/// of each needing a saveLayer), and when each brick first lands, so bricks
+/// that have crumbled away skip the physics.
+class _BarriersCache {
+  static const _alphaSteps = 20;
+  final _labels = <(String, int), TextPainter>{};
+  final _landedAt = <int, double>{};
+  Size? _size;
+
+  TextPainter label(String text, double alpha) {
+    final step = (alpha * _alphaSteps).round();
+    return _labels.putIfAbsent((text, step), () {
+      final a = step / _alphaSteps;
+      return TextPainter(
+        text: TextSpan(
+          text: text,
+          style:
+              zalando(
+                20,
+                weight: 800,
+                color: const Color(0xFFFFFFFF).withValues(alpha: a),
+              ).copyWith(
+                shadows: [
+                  Shadow(
+                    color: const Color(0x88000000)
+                        .withValues(alpha: 0x88 / 255 * a),
+                    blurRadius: 6,
+                  ),
+                ],
+              ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+    });
+  }
+
+  /// Landing times depend on the layout; forget them if the size changes.
+  Map<int, double> landedAt(Size size) {
+    if (size != _size) {
+      _size = size;
+      _landedAt.clear();
+    }
+    return _landedAt;
+  }
+
+  void dispose() {
+    for (final p in _labels.values) {
+      p.dispose();
+    }
+    _labels.clear();
+  }
 }
 
 class _Stack {
@@ -77,8 +136,9 @@ class _Stack {
 }
 
 class _BarriersPainter extends CustomPainter {
-  _BarriersPainter(this.clock) : super(repaint: clock);
+  _BarriersPainter(this.clock, this.cache) : super(repaint: clock);
   final Animation<double> clock;
+  final _BarriersCache cache;
 
   static const totalMs = 4600;
 
@@ -96,6 +156,8 @@ class _BarriersPainter extends CustomPainter {
   static const fadeStart = 2.5, fadeEnd = 3.1;
   static const walkStart = 2.9, walkEnd = 4.1;
   static const gravity = 2600.0;
+  // Seconds after its first bounce that a brick has crumbled to nothing.
+  static const _vanish = 0.55;
 
   // Sizes on the canvas.
   static const slabH = 58.0, slabGap = 8.0, stackW = 132.0;
@@ -109,9 +171,8 @@ class _BarriersPainter extends CustomPainter {
     final cell = size.width / stacks.length;
     final wallW = cell - 20;
 
-    _paintGround(canvas, size, ground, cell, t);
-
     // Stacks, behind the walls.
+    final placed = <(_Stack, Offset, double, double)>[];
     for (final (i, s) in stacks.indexed) {
       final from = cell * (i + 0.5);
       final to = size.width / 2 + (i - (stacks.length - 1) / 2) * (stackW + 18);
@@ -138,7 +199,18 @@ class _BarriersPainter extends CustomPainter {
       final down = t >= crumble && t < walkStart
           ? _bump(t, crumble + 0.1, walkStart - crumble)
           : 0.0;
-      _paintStack(canvas, s, Offset(x, ground - hop - joy), look, down);
+      placed.add((s, Offset(x, ground - hop - joy), look, down));
+    }
+    // Shadows under the ground line, so where two meet they don't pinch it.
+    for (final (_, foot, _, _) in placed) {
+      canvas.drawOval(
+        Rect.fromCenter(center: foot, width: stackW * 1.1, height: 14),
+        Paint()..color = const Color(0xFF000000).withValues(alpha: 0.35),
+      );
+    }
+    _paintGround(canvas, size, ground, cell, t);
+    for (final (s, foot, look, down) in placed) {
+      _paintStack(canvas, s, foot, look, down);
     }
 
     // Walls: whole, cracked, then flying bricks.
@@ -149,7 +221,7 @@ class _BarriersPainter extends CustomPainter {
         wallW,
         wallH,
       );
-      _paintWall(canvas, wall, s.label, i, ground, t);
+      _paintWall(canvas, wall, s.label, i, ground, t, cache.landedAt(size));
     }
   }
 
@@ -176,10 +248,17 @@ class _BarriersPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
     final gap = 28 * (1 - join);
     line.color = Color.lerp(Palette.muted, Palette.accent, join)!;
-    for (var i = 0; i < stacks.length; i++) {
-      final l = i == 0 ? 0.0 : cell * i + gap / 2;
-      final r = i == stacks.length - 1 ? size.width : cell * (i + 1) - gap / 2;
-      canvas.drawLine(Offset(l, ground), Offset(r, ground), line);
+    if (join >= 1) {
+      // One field: a single line, no round caps meeting at the old seams.
+      canvas.drawLine(Offset(0, ground), Offset(size.width, ground), line);
+    } else {
+      for (var i = 0; i < stacks.length; i++) {
+        final l = i == 0 ? 0.0 : cell * i + gap / 2;
+        final r = i == stacks.length - 1
+            ? size.width
+            : cell * (i + 1) - gap / 2;
+        canvas.drawLine(Offset(l, ground), Offset(r, ground), line);
+      }
     }
     if (join > 0) {
       // A soft glow along the open field.
@@ -202,11 +281,7 @@ class _BarriersPainter extends CustomPainter {
     double look,
     double down,
   ) {
-    // Shadow, then slabs bottom up, each a touch lighter.
-    canvas.drawOval(
-      Rect.fromCenter(center: foot, width: stackW * 1.1, height: 14),
-      Paint()..color = const Color(0xFF000000).withValues(alpha: 0.35),
-    );
+    // Slabs bottom up, each a touch lighter (the shadow is drawn earlier).
     late Rect top;
     for (var k = 0; k < s.slabs; k++) {
       final y = foot.dy - (k + 1) * slabH - k * slabGap;
@@ -249,6 +324,7 @@ class _BarriersPainter extends CustomPainter {
     int w,
     double ground,
     double t,
+    Map<int, double> landedAt,
   ) {
     final rng = math.Random(17 + w * 101);
     final go = crumble + w * crumbleStagger;
@@ -266,16 +342,7 @@ class _BarriersPainter extends CustomPainter {
         ? math.sin(t * 90 + w) * 2.2 * crack
         : 0.0;
 
-    final labelPainter = TextPainter(
-      text: TextSpan(
-        text: label,
-        style: zalando(20, weight: 800, color: const Color(0xFFFFFFFF))
-            .copyWith(
-              shadows: const [Shadow(color: Color(0x88000000), blurRadius: 6)],
-            ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
+    final labelPainter = cache.label(label, 1);
     final labelAt =
         wall.center - Offset(labelPainter.width / 2, labelPainter.height / 2);
 
@@ -321,6 +388,9 @@ class _BarriersPainter extends CustomPainter {
         var alpha = fade;
         final fall = t - go - delay;
         if (fall <= 0) standing.add(home.inflate(brickGap / 2 + 0.5));
+        final key = (r * (cols + 1) + c) * stacks.length + w;
+        final landed = landedAt[key];
+        if (fall > 0 && landed != null && fall - landed >= _vanish) continue;
         if (fall > 0) {
           final spread = (home.center.dx - wall.center.dx) / wall.width;
           final s = _simulate(
@@ -333,8 +403,9 @@ class _BarriersPainter extends CustomPainter {
           );
           pos = s.$1;
           angle = s.$2;
+          if (s.$3 > 0) landedAt[key] ??= fall - s.$3;
           // After its first bounce a brick crumbles to nothing.
-          alpha *= 1 - ((s.$3 - 0.15) / 0.4).clamp(0.0, 1.0);
+          alpha *= 1 - ((s.$3 - 0.15) / (_vanish - 0.15)).clamp(0.0, 1.0);
           if (alpha <= 0) continue;
         }
 
@@ -377,14 +448,9 @@ class _BarriersPainter extends CustomPainter {
           ..save()
           ..clipRRect(rr)
           ..translate(-home.center.dx, -home.center.dy);
-        if (alpha < 1) {
-          canvas.saveLayer(
-            null,
-            Paint()..color = const Color(0xFFFFFFFF).withValues(alpha: alpha),
-          );
-        }
-        labelPainter.paint(canvas, labelAt);
-        if (alpha < 1) canvas.restore();
+        // Faded through the text color, not a layer: no offscreen pass per
+        // brick.
+        cache.label(label, alpha).paint(canvas, labelAt);
         canvas
           ..restore()
           ..restore();
@@ -403,7 +469,6 @@ class _BarriersPainter extends CustomPainter {
       labelPainter.paint(canvas, labelAt);
       canvas.restore();
     }
-    labelPainter.dispose();
 
     // Cracks: zigzags running down from the top, drawn progressively, gone
     // once the bricks fly apart.
