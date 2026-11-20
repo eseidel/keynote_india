@@ -14,6 +14,7 @@ import 'whimsy_nohands.dart';
 import 'whimsy_pixels.dart';
 import 'whimsy_sixty.dart';
 import 'whimsy_software.dart';
+import 'whimsy_squishy.dart';
 import 'whimsy_tokens.dart';
 import 'whimsy_truth.dart';
 import 'whimsy_weird.dart';
@@ -125,6 +126,10 @@ final List<Slide> deck = [
         (VerdictKind.good, 'Squishy inputs'),
         (VerdictKind.bad, 'Determinism'),
       ],
+      words: {
+        0: JellyWord('Squishy inputs'),
+        1: SlotWord('Determinism', tries: ['Determinant', 'Detergent  ']),
+      },
     ),
     section: Section.ai,
     notes: "For my whole career we packaged data as XML or JSON so software could read it. Now squishy input is fine. The flip side: ask three times, get three answers. Not a compiler, and another reason prompting once for two platforms is weak.",
