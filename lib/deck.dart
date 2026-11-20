@@ -7,6 +7,7 @@ import 'whimsy_anyoneread.dart';
 import 'whimsy_approaches.dart';
 import 'whimsy_barriers.dart';
 import 'whimsy_best.dart';
+import 'whimsy_bio.dart';
 import 'whimsy_bird.dart';
 import 'whimsy_builtown.dart';
 import 'whimsy_callback.dart';
@@ -101,7 +102,7 @@ final List<Slide> deck = [
     notes: "Agents writing your code? Haven't typed code in a week? Compare to six months ago. Read the room; lean in or ease off.",
   ),
   Slide(
-    Bio(
+    BioTimeline(
       name: 'Eric Seidel',
       lines: const [
         'Software Engineer, 20+ years',
@@ -111,6 +112,8 @@ final List<Slide> deck = [
         'Founder & CEO, Shorebird',
       ],
       photo: img('g3f07557751c_0_164.jpg'),
+      // Engineer, then browsers, then Flutter, then Shorebird.
+      order: const [0, 3, 1, 2, 4],
     ),
     notes: 'Browsers, then started Flutter, then Shorebird. Decades on making portable the default. Shorebird: one line, booth later.',
   ),
