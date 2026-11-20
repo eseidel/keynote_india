@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'layouts.dart';
 import 'materialize.dart';
+import 'whimsy_barriers.dart';
 import 'whimsy_bird.dart';
 import 'whimsy_cambrian.dart';
 import 'whimsy_dash.dart';
@@ -259,12 +260,8 @@ final List<Slide> deck = [
     section: Section.flutter,
     notes: "Bought into portable? Then which approach. We built Flutter because we'd tried the rest.",
   ),
-  Slide(
-    SplitImage(
-      text: 'The barriers\nbetween stacks\nare gone',
-      image: img('g3f42c810597_1_6.png'),
-      size: 60,
-    ),
+  const Slide(
+    BarriersSlide(text: 'The barriers\nbetween stacks\nare gone', size: 60),
     section: Section.flutter,
     notes: "Easy to get into any stack now, so stacks are judged on end quality, agent fit and maintenance. The iOS lead who wouldn't leave Swift isn't the blocker anymore.",
   ),
