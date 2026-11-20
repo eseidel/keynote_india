@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'layouts.dart';
 import 'materialize.dart';
+import 'whimsy_best.dart';
 import 'whimsy_bird.dart';
 import 'whimsy_dash.dart';
 import 'whimsy_drift.dart';
@@ -307,7 +308,7 @@ final List<Slide> deck = [
     notes: 'Transition into Flutter. If you carry a stack, carry the best one.',
   ),
   const Slide(
-    Statement('Flutter is the best we have.'),
+    BestStatement('Flutter is the best we have.', emphasis: 'best'),
     section: Section.flutter,
     notes: "Flutter has been and remains the best portable software we have. Here's why, structurally.",
   ),
