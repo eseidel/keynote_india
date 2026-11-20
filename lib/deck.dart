@@ -19,6 +19,7 @@ import 'whimsy_glitch.dart';
 import 'whimsy_halfmillion.dart';
 import 'whimsy_important.dart';
 import 'whimsy_intent.dart';
+import 'whimsy_lead.dart';
 import 'whimsy_learners.dart';
 import 'whimsy_learning.dart';
 import 'whimsy_nohands.dart';
@@ -499,7 +500,7 @@ final List<Slide> deck = [
     notes: 'Our jobs have changed, and then they haven\'t. We still own the outcome.',
   ),
   const Slide(
-    Statement('This community can lead'),
+    LeadStatement('This community can lead'),
     section: Section.us,
     notes: 'Good outcomes, good tools, kindness, going home to play with your kids instead of writing a second platform.',
   ),
