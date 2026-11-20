@@ -8,7 +8,7 @@ import 'theme.dart';
 /// "Flutter was built for humans": a little convertible drives in along a
 /// road under the line with a person at the wheel. It stops, the person
 /// hops out over the back, and a small robot walks in from the right, hops
-/// over the hood into the driver's seat, and grips the wheel. The car revs
+/// onto the hood and then over the windshield into the driver's seat, and grips the wheel. The car revs
 /// happily; the person waves. Built for humans to drive; now agents drive.
 /// Plays once when the slide appears and settles in about four seconds.
 class DriversStatement extends StatefulWidget {
@@ -19,8 +19,8 @@ class DriversStatement extends StatefulWidget {
   State<DriversStatement> createState() => _DriversStatementState();
 }
 
-const _totalMs = 4200;
-const _lift = 90.0;
+const _totalMs = 4600;
+const _lift = 115.0;
 
 class _DriversStatementState extends State<DriversStatement>
     with SingleTickerProviderStateMixin {
@@ -78,14 +78,17 @@ class _RoadPainter extends CustomPainter {
   static const _driveEnd = 1100.0;
   static const _humanHop = (1350.0, 1850.0);
   static const _robotWalk = (1650.0, 2500.0);
-  static const _robotHop = (2550.0, 3000.0);
-  static const _rev = (3100.0, 3550.0);
-  static const _wave = (3050.0, 4150.0);
+  static const _robotHood = (2550.0, 2850.0); // ground to hood
+  static const _robotHop = (2950.0, 3400.0); // hood, over the glass, to seat
+  static const _rev = (3500.0, 3950.0);
+  static const _wave = (3450.0, 4550.0);
+  static const _blink = (4000.0, 4150.0);
 
   // Where people stand and sit, relative to the car's center.
   static const _seat = Offset(-25, -55); // feet of whoever's driving
   static const _humanSpot = Offset(-265, 0);
   static const _robotSpot = Offset(225, 0);
+  static const _hood = Offset(100, -92); // where the robot stands on the hood
 
   static const _carRed = Color(0xFFFF6B5A);
   static const _carDark = Color(0xFFD2483B);
@@ -103,7 +106,7 @@ class _RoadPainter extends CustomPainter {
     final ms = t.value * _totalMs;
     canvas.scale(_scale);
 
-    // Road: a line with dashes that end where the car parks.
+    // Road: a line with lane dashes under it.
     canvas.drawLine(
       const Offset(0, _g),
       const Offset(1400, _g),
@@ -129,9 +132,6 @@ class _RoadPainter extends CustomPainter {
       pitch -= 0.015 * math.sin(rev * math.pi * 4) * (1 - rev);
     }
 
-    // Who's where.
-    final humanHop = _phase(ms, _humanHop.$1, _humanHop.$2);
-    final robotHop = _phase(ms, _robotHop.$1, _robotHop.$2);
     final car = Offset(cx, _g);
 
     // Exhaust puffs behind the car as it revs.
@@ -151,12 +151,23 @@ class _RoadPainter extends CustomPainter {
     canvas.translate(-pivot.dx, -pivot.dy);
 
     _paintSeat(canvas, car);
-    // Riders are drawn behind the body, so the door hides their legs.
-    if (humanHop == 0) {
-      _human(canvas, car + _seat, face: 1, arm: 1.25);
+    // Riders inside the car are drawn behind the body, so the door hides
+    // their legs. Each switches sides at the top of a hop, when its feet
+    // are clear above the body and the glass, so the switch can't be seen.
+    final human = _humanPose(ms, car);
+    final robot = _robotPose(ms, car);
+    if (human.inside) {
+      _human(canvas, human.feet, face: human.face, arm: human.arm);
     }
-    if (robotHop == 1) {
-      _robot(canvas, car + _seat, ms, face: 1, arm: 1.25, seated: true);
+    if (robot != null && robot.inside) {
+      _robot(
+        canvas,
+        robot.feet,
+        ms,
+        face: robot.face,
+        arm: robot.arm,
+        seated: true,
+      );
     }
     _paintBody(canvas, car);
     canvas.restore();
@@ -165,49 +176,122 @@ class _RoadPainter extends CustomPainter {
     _paintWheel(canvas, car + const Offset(-82, -28), travel);
     _paintWheel(canvas, car + const Offset(86, -28), travel);
 
-    // The human hops out over the back and lands beside the car.
-    if (humanHop > 0) {
-      final from = car + _seat, to = Offset(_cx, _g) + _humanSpot;
-      final e = Curves.easeInOut.transform(humanHop);
-      final p =
-          Offset.lerp(from, to, e)! +
-          Offset(0, -75 * math.sin(math.pi * humanHop));
-      final land = math.max(0.0, ms - _humanHop.$2) / 1000;
-      final squash = humanHop < 1
-          ? 0.0
-          : 0.14 * math.exp(-land * 10) * math.cos(land * 22);
-      // Waving at the new driver.
-      final w = _phase(ms, _wave.$1, _wave.$2);
-      final raise = w <= 0
-          ? 0.0
-          : math.min(1.0, math.min(w / 0.15, (1 - w) / 0.25));
-      final arm = humanHop < 1
-          ? 2.4 // arms up for the hop
-          : 0.25 + raise * (2.35 + 0.4 * math.sin(w * math.pi * 7));
-      _human(canvas, p, face: humanHop < 1 ? -1 : 1, arm: arm, squash: squash);
+    if (!human.inside) {
+      _human(
+        canvas,
+        human.feet,
+        face: human.face,
+        arm: human.arm,
+        squash: human.squash,
+      );
     }
+    if (robot != null && !robot.inside) {
+      _robot(canvas, robot.feet, ms, face: robot.face, arm: robot.arm);
+    }
+  }
 
-    // The robot walks in from the right, then hops over the hood.
-    if (robotHop < 1) {
-      final walk = _phase(ms, _robotWalk.$1, _robotWalk.$2);
-      if (walk > 0) {
-        final spot = Offset(_cx, _g) + _robotSpot;
-        final walkIn = Curves.easeOut.transform(walk);
-        var p = spot + Offset((1 - walkIn) * 700, 0);
-        var arm = 0.25 + 0.25 * math.sin(walk * math.pi * 8) * (1 - walk);
-        if (walk < 1) {
-          p += Offset(0, -6 * math.sin(walk * math.pi * 8).abs() * (1 - walk));
-        }
-        if (robotHop > 0) {
-          final e = Curves.easeInOut.transform(robotHop);
-          p =
-              Offset.lerp(spot, car + _seat, e)! +
-              Offset(0, -70 * math.sin(math.pi * robotHop));
-          arm = 2.4;
-        }
-        _robot(canvas, p, ms, face: -1, arm: arm);
-      }
+  /// Turning around, eased: the figure's x scale passes through zero.
+  /// It never gets thinner than 30%, so it doesn't vanish mid-turn.
+  static double _turn(double from, double to, double p) {
+    final f =
+        from + (to - from) * Curves.easeInOut.transform(p.clamp(0.0, 1.0));
+    final side = f == 0 ? to.sign : f.sign;
+    return side * (0.3 + 0.7 * f.abs());
+  }
+
+  /// The person: drives, hops out over the back, lands, turns, waves.
+  ({Offset feet, double face, double arm, double squash, bool inside})
+  _humanPose(double ms, Offset car) {
+    final hop = _phase(ms, _humanHop.$1, _humanHop.$2);
+    if (hop == 0) {
+      return (feet: car + _seat, face: 1, arm: 1.25, squash: 0, inside: true);
     }
+    final from = car + _seat, to = Offset(_cx, _g) + _humanSpot;
+    final e = Curves.easeInOut.transform(hop);
+    final feet =
+        Offset.lerp(from, to, e)! + Offset(0, -75 * math.sin(math.pi * hop));
+    final land = math.max(0.0, ms - _humanHop.$2) / 1000;
+    final squash = hop < 1
+        ? 0.0
+        : 0.14 * math.exp(-land * 10) * math.cos(land * 22);
+    // Turns to face where it's jumping, then back to face the car.
+    final face = hop < 1 ? _turn(1, -1, hop / 0.3) : _turn(-1, 1, land / 0.2);
+    // Arms go up for the jump; later, a wave at the new driver.
+    final w = _phase(ms, _wave.$1, _wave.$2);
+    final raise = w <= 0
+        ? 0.0
+        : math.min(1.0, math.min(w / 0.15, (1 - w) / 0.25));
+    final arm = hop < 1
+        ? 1.25 +
+              (2.4 - 1.25) *
+                  Curves.easeOut.transform(hop / 0.25 > 1 ? 1 : hop / 0.25)
+        : 2.4 +
+              (0.25 - 2.4) *
+                  Curves.easeOut.transform((land / 0.2).clamp(0, 1)) +
+              raise * (2.35 + 0.4 * math.sin(w * math.pi * 7));
+    return (
+      feet: feet,
+      face: face,
+      arm: arm,
+      squash: squash,
+      inside: hop < 0.5,
+    );
+  }
+
+  /// The robot: walks in from the right, hops up onto the hood, then over
+  /// the windshield into the seat, turning to face the road at the top.
+  ({Offset feet, double face, double arm, bool inside})? _robotPose(
+    double ms,
+    Offset car,
+  ) {
+    final walk = _phase(ms, _robotWalk.$1, _robotWalk.$2);
+    if (walk <= 0) return null;
+    final spot = Offset(_cx, _g) + _robotSpot;
+    final up = _phase(ms, _robotHood.$1, _robotHood.$2);
+    final hop = _phase(ms, _robotHop.$1, _robotHop.$2);
+    if (up == 0) {
+      final walkIn = Curves.easeOut.transform(walk);
+      final bob = walk < 1
+          ? -6 * math.sin(walk * math.pi * 8).abs() * (1 - walk)
+          : 0.0;
+      return (
+        feet: spot + Offset((1 - walkIn) * 700, bob),
+        face: -1,
+        arm: 0.25 + 0.25 * math.sin(walk * math.pi * 8) * (1 - walk),
+        inside: false,
+      );
+    }
+    final hood = car + _hood;
+    if (hop == 0) {
+      // Up onto the hood (and stands there a beat).
+      final e = Curves.easeInOut.transform(up);
+      return (
+        feet:
+            Offset.lerp(spot, hood, e)! +
+            Offset(0, -55 * math.sin(math.pi * up)),
+        face: -1,
+        arm: 0.25 + 2.15 * math.sin(math.pi * up),
+        inside: false,
+      );
+    }
+    // Over the glass: the top of the arc is right above the windshield.
+    final e = Curves.easeInOut.transform(hop);
+    final feet =
+        Offset.lerp(hood, car + _seat, e)! +
+        Offset(0, -80 * math.sin(math.pi * hop));
+    final arm = hop < 0.7
+        ? 0.25 + 2.15 * Curves.easeOut.transform(hop / 0.3 > 1 ? 1 : hop / 0.3)
+        : 2.4 +
+              (1.25 - 2.4) *
+                  Curves.easeInOut.transform(
+                    ((hop - 0.7) / 0.3).clamp(0.0, 1.0),
+                  );
+    return (
+      feet: feet,
+      face: _turn(-1, 1, (hop - 0.3) / 0.4),
+      arm: arm,
+      inside: hop >= 0.5,
+    );
   }
 
   static final _dashPaint = Paint()
@@ -263,17 +347,19 @@ class _RoadPainter extends CustomPainter {
       ..close();
   }();
 
+  static final Path _windshield = Path()
+    ..moveTo(38, -96)
+    ..lineTo(20, -140)
+    ..lineTo(30, -140)
+    ..lineTo(52, -96)
+    ..close();
+
   void _paintBody(Canvas canvas, Offset car) {
     canvas.save();
     canvas.translate(car.dx, car.dy);
     // Windshield and steering wheel, behind the body line.
     canvas.drawPath(
-      Path()
-        ..moveTo(38, -96)
-        ..lineTo(20, -140)
-        ..lineTo(30, -140)
-        ..lineTo(52, -96)
-        ..close(),
+      _windshield,
       Paint()..color = const Color(0xFF9FDCF5).withValues(alpha: 0.55),
     );
     final wheel = Paint()
@@ -337,6 +423,22 @@ class _RoadPainter extends CustomPainter {
     canvas.drawCircle(c, 4, Paint()..color = const Color(0xFF7A8494));
   }
 
+  static const _head = Offset(2, -114);
+  static final Path _hairPath = (() {
+    const head = _head;
+    return Path()
+      ..moveTo(head.dx - 20, head.dy + 2)
+      ..arcTo(
+        Rect.fromCircle(center: head, radius: 20),
+        math.pi,
+        math.pi * 0.95,
+        false,
+      )
+      ..quadraticBezierTo(head.dx + 4, head.dy - 8, head.dx - 8, head.dy - 6)
+      ..quadraticBezierTo(head.dx - 14, head.dy - 2, head.dx - 13, head.dy + 8)
+      ..close();
+  })();
+
   /// A person standing on [feet], facing right ([face] 1) or left (-1).
   /// [arm] is the front arm's angle up from hanging straight down.
   void _human(
@@ -376,27 +478,9 @@ class _RoadPainter extends CustomPainter {
     canvas.drawLine(shoulder, hand, limb);
     canvas.drawCircle(hand, 6, Paint()..color = _skin);
     // Head.
-    const head = Offset(2, -114);
+    const head = _head;
     canvas.drawCircle(head, 19, Paint()..color = _skin);
-    canvas.drawPath(
-      Path()
-        ..moveTo(head.dx - 20, head.dy + 2)
-        ..arcTo(
-          Rect.fromCircle(center: head, radius: 20),
-          math.pi,
-          math.pi * 0.95,
-          false,
-        )
-        ..quadraticBezierTo(head.dx + 4, head.dy - 8, head.dx - 8, head.dy - 6)
-        ..quadraticBezierTo(
-          head.dx - 14,
-          head.dy - 2,
-          head.dx - 13,
-          head.dy + 8,
-        )
-        ..close(),
-      Paint()..color = _hair,
-    );
+    canvas.drawPath(_hairPath, Paint()..color = _hair);
     canvas.drawCircle(head + const Offset(9, -1), 2.6, Paint()..color = _hair);
     canvas.drawArc(
       Rect.fromCircle(center: head + const Offset(8, 5), radius: 6),
@@ -491,7 +575,7 @@ class _RoadPainter extends CustomPainter {
       ),
       Paint()..color = _visor,
     );
-    final blink = seated ? _phase(ms, 3600, 3750) : 0.0;
+    final blink = seated ? _phase(ms, _blink.$1, _blink.$2) : 0.0;
     final open = 1 - math.sin(blink * math.pi);
     for (final x in [-3.0, 9.0]) {
       canvas.drawOval(
