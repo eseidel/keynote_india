@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
@@ -55,27 +56,56 @@ class _PresenterState extends State<Presenter> {
     // Global handler: works whatever has focus (the Focus widget missed keys
     // when the window opened without focus).
     HardwareKeyboard.instance.addHandler(_onKey);
-    // --dart-define=SNAP=/path.png captures the slide after a few seconds
-    // and quits; used to check the live 3D slide without a human.
+    // --dart-define=SNAP=name.png captures the slide and quits; used to check
+    // the live 3D slides without a human. SNAP_MS is a comma list of capture
+    // times (name_0.png, name_1.png, ... when there are several), and
+    // SHATTER_T an optional matching list of frozen shatter clocks.
     const snap = String.fromEnvironment('SNAP');
-    if (snap.isNotEmpty) {
-      const melt = int.fromEnvironment('SNAP_STEP_MS');
-      if (melt > 0) {
-        Future.delayed(const Duration(milliseconds: melt), next);
-      }
-      const at = int.fromEnvironment('SNAP_MS', defaultValue: 10000);
-      Future.delayed(const Duration(milliseconds: at), () async {
-        final ro =
-            boundary.currentContext!.findRenderObject()!
-                as RenderRepaintBoundary;
-        final image = await ro.toImage();
-        final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-        final out = File('${Directory.systemTemp.path}/$snap');
-        out.writeAsBytesSync(bytes!.buffer.asUint8List());
-        debugPrint('SNAP_WRITTEN ${out.path}');
-        exit(0);
-      });
+    if (snap.isNotEmpty) _snapAll(snap);
+  }
+
+  Future<void> _snapAll(String snap) async {
+    const melt = int.fromEnvironment('SNAP_STEP_MS');
+    if (melt > 0) {
+      Future.delayed(const Duration(milliseconds: melt), next);
     }
+    const atList = String.fromEnvironment('SNAP_MS', defaultValue: '10000');
+    const clocks = String.fromEnvironment('SHATTER_T');
+    final ats = atList.split(',').map(int.parse).toList();
+    final ts = clocks.isEmpty
+        ? <double>[]
+        : clocks.split(',').map(double.parse).toList();
+    // Freeze the shatter from its first frame, so a late first capture
+    // still sees the glass rather than the slide after it.
+    if (ts.isNotEmpty) shatterClock.value = ts.first;
+    final start = DateTime.now();
+    for (var i = 0; i < ats.length; i++) {
+      final wait =
+          Duration(milliseconds: ats[i]) - DateTime.now().difference(start);
+      if (wait > Duration.zero) await Future.delayed(wait);
+      if (i < ts.length) shatterClock.value = ts[i];
+      // A ticking 3D scene keeps the boundary dirty; capture between frames.
+      await WidgetsBinding.instance.endOfFrame;
+      await WidgetsBinding.instance.endOfFrame;
+      final image = await _capture();
+      final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+      final name = ats.length == 1
+          ? snap
+          : snap.replaceFirst(RegExp(r'\.png$'), '_$i.png');
+      final out = File('${Directory.systemTemp.path}/$name');
+      out.writeAsBytesSync(bytes!.buffer.asUint8List());
+      debugPrint('SNAP_WRITTEN ${out.path}');
+    }
+    exit(0);
+  }
+
+  Future<ui.Image> _capture() async {
+    final ro =
+        boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    if (kDebugMode && ro.debugNeedsPaint) {
+      await WidgetsBinding.instance.endOfFrame;
+    }
+    return ro.toImage();
   }
 
   void go(int i, {bool atEnd = false}) => setState(() {
@@ -83,7 +113,12 @@ class _PresenterState extends State<Presenter> {
     step = atEnd ? deck[index].builds : 0;
   });
 
+  /// While the glass is falling (or being captured), navigation waits: a
+  /// second press on the black would skip the next slide unseen.
+  bool get _transitioning => shatter != null || _capturing;
+
   void next() {
+    if (_transitioning) return;
     if (step < deck[index].builds) return setState(() => step++);
     if (deck[index].shatterOut && index < deck.length - 1) {
       _shatterTo(index + 1);
@@ -97,9 +132,15 @@ class _PresenterState extends State<Presenter> {
   Future<void> _shatterTo(int i) async {
     if (_capturing) return;
     _capturing = true;
-    final ro =
-        boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-    final image = await ro.toImage();
+    final ui.Image image;
+    try {
+      image = await _capture();
+    } catch (_) {
+      // No snapshot, no glass: just cut to the next slide.
+      _capturing = false;
+      if (mounted) go(i);
+      return;
+    }
     _capturing = false;
     if (!mounted) return;
     setState(() {
@@ -110,7 +151,11 @@ class _PresenterState extends State<Presenter> {
     });
   }
 
-  void back() => step > 0 ? setState(() => step--) : go(index - 1, atEnd: true);
+  void back() => _transitioning
+      ? null
+      : step > 0
+      ? setState(() => step--)
+      : go(index - 1, atEnd: true);
 
   @override
   void dispose() {
