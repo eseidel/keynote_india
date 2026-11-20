@@ -165,7 +165,7 @@ class _Letters {
     second = _packed(text, style, _derange(n, r));
     delays = [for (var i = 0; i < n; i++) r.nextDouble() * _maxDelay];
     // Each letter's ink bottom below its box top: the baseline, or lower
-    // for g and j.
+    // for descenders (g, j, p, q, y).
     final lm = line.computeLineMetrics().first;
     final letters = text.replaceAll(' ', '');
     feet = [
@@ -281,8 +281,6 @@ class _Letters {
   late final List<double> first, second;
   late final List<double> delays, feet;
   final floors = <int, double>{};
-
-  Size get size => line.size;
 
   void dispose() {
     line.dispose();
