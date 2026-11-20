@@ -93,8 +93,10 @@ const _tries = [
 
 /// How far the word's right end is lifted (negative: counterclockwise).
 double _wordAngle(double t) {
-  for (final k in _tries) {
-    if (t < k.lift) break;
+  // Only the latest try that has started counts, so a lift takes over from
+  // the previous drop's bounce without a frame of it lying flat.
+  for (final k in _tries.reversed) {
+    if (t < k.lift) continue;
     if (t < k.drop) {
       // Up slowly, trembling more as it strains.
       final up = Curves.easeOut.transform(_seg(t, k.lift, k.peak));
@@ -112,6 +114,7 @@ double _wordAngle(double t) {
     if (b < 0.35) {
       return -k.angle * 0.12 * math.sin(b / 0.35 * math.pi) * (1 - b / 0.35);
     }
+    return 0;
   }
   return 0;
 }
@@ -126,7 +129,6 @@ class _RobotPainter extends CustomPainter {
   static const _metalDark = Color(0xFF8C9EB8);
   static const _ink = Color(0xFF2A3342);
   static const _screen = Color(0xFF111821);
-  static const _s = 1.0; // robot scale
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -149,9 +151,12 @@ class _RobotPainter extends CustomPainter {
       // Crouch just before each lift, straighten as it heaves.
       final pre = _seg(t, k.lift - 0.25, k.lift);
       final up = _seg(t, k.lift, k.peak);
-      if (t >= k.lift - 0.25 && t < k.drop) {
-        crouch = math.max(crouch, pre * (1 - up * 0.6));
-        strain = math.max(strain, (i + 1) / _tries.length * up);
+      // After the drop both ease back to nothing over 0.2s, rather than
+      // snapping the upper body upright in one frame.
+      final relax = 1 - Curves.easeOut.transform(_seg(t, k.drop, k.drop + 0.2));
+      if (t >= k.lift - 0.25) {
+        crouch = math.max(crouch, pre * (1 - up * 0.6) * relax);
+        strain = math.max(strain, (i + 1) / _tries.length * up * relax);
       }
       // Jolt backwards when it lets go.
       final r = t - k.drop;
@@ -200,7 +205,6 @@ class _RobotPainter extends CustomPainter {
     // --- The robot ---------------------------------------------------------
     canvas.save();
     canvas.translate(base.dx + shake, base.dy);
-    canvas.scale(_s);
     final stroke = Paint()
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
@@ -288,12 +292,9 @@ class _RobotPainter extends CustomPainter {
       RRect.fromLTRBR(-24, -66 + squat, 24, -24, const Radius.circular(8)),
       fill..color = _screen,
     );
-    // A little status light on the chest: blue, amber while straining.
-    final lamp = Color.lerp(
-      Palette.accent,
-      Palette.warn,
-      _clamp01(strain * 1.3),
-    )!;
+    // A little status light on the chest: blue, amber with the antenna on
+    // the big try.
+    final lamp = Color.lerp(Palette.accent, Palette.warn, glow)!;
     canvas.drawCircle(Offset(-10, -45 + squat / 2), 6, fill..color = lamp);
     canvas.drawCircle(
       Offset(10, -45 + squat / 2),
@@ -352,7 +353,7 @@ class _RobotPainter extends CustomPainter {
     canvas.restore();
   }
 
-  /// Screen [p] into the robot's upper-body frame (after translate, scale,
+  /// Screen [p] into the robot's upper-body frame (after the translate,
   /// the crouch offset and the lean).
   Offset _toLocal(
     Offset p,
@@ -361,7 +362,7 @@ class _RobotPainter extends CustomPainter {
     double squat,
     double lean,
   ) {
-    var q = (p - base - Offset(shake, 0)) / _s;
+    var q = p - base - Offset(shake, 0);
     q -= Offset(0, -40 + squat * 0.4);
     final c = math.cos(-lean), s = math.sin(-lean);
     return Offset(q.dx * c - q.dy * s, q.dx * s + q.dy * c);
