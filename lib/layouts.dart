@@ -586,7 +586,7 @@ class ProsCons extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 420,
+            width: 380,
             child: Text(
               label,
               style: zalando(
@@ -596,17 +596,17 @@ class ProsCons extends StatelessWidget {
               ).copyWith(letterSpacing: 3),
             ),
           ),
-          Expanded(child: Text(text, style: zalando(30, weight: 500))),
+          Expanded(child: Text(text, style: zalando(26, weight: 500))),
         ],
       ),
     );
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 220),
+      padding: const EdgeInsets.symmetric(horizontal: 180),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: headline(50)),
+          Text(title, style: headline(44)),
           const SizedBox(height: 12),
           Text(examples, style: zalando(22, color: Palette.muted)),
           const SizedBox(height: 50),
