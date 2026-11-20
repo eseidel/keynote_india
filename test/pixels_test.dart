@@ -19,7 +19,9 @@ void main() {
     );
     await tester.pumpAndSettle(); // the entry assembly settles
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
-    await mouse.addPointer(location: tester.getCenter(find.byType(PixelStatement)));
+    await mouse.addPointer(
+      location: tester.getCenter(find.byType(PixelStatement)),
+    );
     await mouse.moveBy(const Offset(1, 0));
     await tester.pump(const Duration(milliseconds: 100));
     expect(tester.binding.hasScheduledFrame, isTrue); // scattering

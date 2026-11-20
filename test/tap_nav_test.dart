@@ -34,6 +34,10 @@ void main() {
     expect(probe.slide, i + 1);
     await probe.tap(60, kind: PointerDeviceKind.stylus); // a pen goes back
     expect(probe.slide, i);
+
+    // The black bar above the slide on a portrait phone counts too.
+    await probe.tap(300, y: 100);
+    expect(probe.slide, i + 1);
   });
 }
 
@@ -47,9 +51,10 @@ class _PresenterProbe {
 
   Future<void> tap(
     double x, {
+    double y = 400,
     PointerDeviceKind kind = PointerDeviceKind.touch,
   }) async {
-    await tester.tapAt(Offset(x, 400), kind: kind);
+    await tester.tapAt(Offset(x, y), kind: kind);
     await tester.pump(const Duration(seconds: 1));
   }
 }
