@@ -72,13 +72,17 @@ class _Glyphs {
         text: TextSpan(text: ch, style: style),
         textDirection: TextDirection.ltr,
       )..layout();
+      // Each letter's own bob: a fixed phase and frequency, seeded per index.
+      final r = math.Random(glyphs.length * 31 + 7);
       glyphs.add((p, box, word));
+      motion.add((r.nextDouble() * 2 * math.pi, 0.55 + 0.5 * r.nextDouble()));
     }
     lastWord = word;
   }
 
   final TextPainter line;
   final glyphs = <(TextPainter, Rect, int)>[]; // painter, box, word index
+  final motion = <(double, double)>[]; // phase, freq
   late final int lastWord;
 
   Size get size => line.size;
@@ -132,9 +136,7 @@ class _WeirdPainter extends CustomPainter {
     for (var i = 0; i < n; i++) {
       final (p, box, word) = g.glyphs[i];
       final isWeird = word == g.lastWord;
-      final r = math.Random(i * 31 + 7);
-      final phase = r.nextDouble() * 2 * math.pi;
-      final freq = 0.55 + 0.5 * r.nextDouble();
+      final (phase, freq) = g.motion[i];
       final amp = isWeird ? 1.35 : 1.0;
       // Zero-g bob, a ripple rolling left to right, a lazy spin and breathe.
       final ripple = math.sin(box.center.dx / 150 - s * 5.0);
