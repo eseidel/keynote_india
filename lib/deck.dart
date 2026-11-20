@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'layouts.dart';
 import 'materialize.dart';
 import 'whimsy_bird.dart';
+import 'whimsy_callback.dart';
 import 'whimsy_dash.dart';
 import 'whimsy_drift.dart';
 import 'whimsy_glitch.dart';
@@ -479,7 +480,7 @@ final List<Slide> deck = [
     notes: 'People, not platforms.',
   ),
   const Slide(
-    Callback(
+    StampedCallback(
       question: 'Why not prompt once and get two apps?',
       answers: ['You’d own two.', 'You’d pay 3x.', 'You’d get two answers.'],
     ),
