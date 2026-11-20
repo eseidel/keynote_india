@@ -75,6 +75,9 @@ class _PresenterState extends State<Presenter> {
     final ts = clocks.isEmpty
         ? <double>[]
         : clocks.split(',').map(double.parse).toList();
+    // Freeze the shatter from its first frame, so a late first capture
+    // still sees the glass rather than the slide after it.
+    if (ts.isNotEmpty) shatterClock.value = ts.first;
     final start = DateTime.now();
     for (var i = 0; i < ats.length; i++) {
       final wait =
@@ -99,8 +102,9 @@ class _PresenterState extends State<Presenter> {
   Future<ui.Image> _capture() async {
     final ro =
         boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
-    if (kDebugMode && ro.debugNeedsPaint)
+    if (kDebugMode && ro.debugNeedsPaint) {
       await WidgetsBinding.instance.endOfFrame;
+    }
     return ro.toImage();
   }
 
@@ -109,7 +113,12 @@ class _PresenterState extends State<Presenter> {
     step = atEnd ? deck[index].builds : 0;
   });
 
+  /// While the glass is falling (or being captured), navigation waits: a
+  /// second press on the black would skip the next slide unseen.
+  bool get _transitioning => shatter != null || _capturing;
+
   void next() {
+    if (_transitioning) return;
     if (step < deck[index].builds) return setState(() => step++);
     if (deck[index].shatterOut && index < deck.length - 1) {
       _shatterTo(index + 1);
@@ -123,7 +132,15 @@ class _PresenterState extends State<Presenter> {
   Future<void> _shatterTo(int i) async {
     if (_capturing) return;
     _capturing = true;
-    final image = await _capture();
+    final ui.Image image;
+    try {
+      image = await _capture();
+    } catch (_) {
+      // No snapshot, no glass: just cut to the next slide.
+      _capturing = false;
+      if (mounted) go(i);
+      return;
+    }
     _capturing = false;
     if (!mounted) return;
     setState(() {
@@ -134,7 +151,11 @@ class _PresenterState extends State<Presenter> {
     });
   }
 
-  void back() => step > 0 ? setState(() => step--) : go(index - 1, atEnd: true);
+  void back() => _transitioning
+      ? null
+      : step > 0
+      ? setState(() => step--)
+      : go(index - 1, atEnd: true);
 
   @override
   void dispose() {

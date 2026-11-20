@@ -5,13 +5,13 @@ import 'package:flutter/material.dart' hide Material;
 import 'package:flutter_scene/scene.dart';
 import 'package:vector_math/vector_math.dart' as vm;
 
-/// A slide transition: a snapshot of the outgoing slide, cut into glass
-/// shards in a Flutter Scene, cracks outward from an impact point and blows
-/// toward the audience, revealing the next slide underneath.
 /// Freezes the shatter at this many seconds, for checking frames (set by
 /// the SNAP harness in main.dart); null runs on the real clock.
 final shatterClock = ValueNotifier<double?>(null);
 
+/// A slide transition: a snapshot of the outgoing slide, cut into glass
+/// shards in a Flutter Scene, cracks outward from an impact point and blows
+/// toward the audience, revealing the next slide underneath.
 class ShatterOverlay extends StatefulWidget {
   const ShatterOverlay({super.key, required this.image, required this.onDone});
 
