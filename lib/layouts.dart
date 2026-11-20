@@ -22,6 +22,24 @@ class BuildStep extends InheritedWidget {
 /// Big centered statement, one idea per slide. Each '\n' starts a line;
 /// lines get generous spacing, and with [reveal] they appear one per click
 /// (give the Slide `builds: lines - 1`). A blank line is a spacer.
+/// Text where *words* between asterisks are italic.
+Widget _rich(String text, TextStyle style) {
+  final parts = text.split('*');
+  return Text.rich(
+    TextSpan(
+      children: [
+        for (final (i, part) in parts.indexed)
+          TextSpan(
+            text: part,
+            style: i.isOdd ? style.copyWith(fontStyle: FontStyle.italic) : null,
+          ),
+      ],
+    ),
+    textAlign: TextAlign.center,
+    style: style,
+  );
+}
+
 class Statement extends StatelessWidget {
   const Statement(
     this.text, {
@@ -42,9 +60,7 @@ class Statement extends StatelessWidget {
     if (lines.length == 1) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 160),
-        child: Center(
-          child: Text(text, textAlign: TextAlign.center, style: style),
-        ),
+        child: Center(child: _rich(text, style)),
       );
     }
     final shown = reveal ? BuildStep.of(context) : lines.length;
@@ -60,7 +76,7 @@ class Statement extends StatelessWidget {
                 child: AnimatedOpacity(
                   opacity: i <= shown ? 1 : 0,
                   duration: const Duration(milliseconds: 300),
-                  child: Text(line, textAlign: TextAlign.center, style: style),
+                  child: _rich(line, style),
                 ),
               ),
           ],

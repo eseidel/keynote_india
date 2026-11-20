@@ -368,7 +368,10 @@ final List<Slide> deck = [
     notes: '~10 new portable efforts last quarter. A Cambrian explosion. Few are serious; most are years from Flutter\'s quality.',
   ),
   const Slide(
-    Statement('Flutter is good with agents.\n\nIt could be amazing.', size: 40),
+    Statement(
+      'Flutter is good with agents.\n\nIt could be *amazing*.',
+      size: 40,
+    ),
     section: Section.flutter,
     notes: 'Still designed around humans. It has to be designed soup to nuts around agents, or somebody else will. E.g. faster analyzer, system explained to agents, iOS from Linux productized.',
   ),
