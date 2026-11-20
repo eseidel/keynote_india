@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'layouts.dart';
 import 'materialize.dart';
+import 'whimsy_tokens.dart';
 
 enum Section { ai, flutter, us }
 
@@ -80,7 +81,11 @@ final List<Slide> deck = [
     section: Section.ai,
   ),
   const Slide(
-    Statement('Token prediction\nAt scale\nOn demand', reveal: true),
+    Statement(
+      'Token prediction\nAt scale\nOn demand',
+      reveal: true,
+      below: {0: TokenPrediction()},
+    ),
     section: Section.ai,
     builds: 2,
     notes: 'Not our first transition: PCs, the internet, mobile. "Mary had a little..." An expert at 3am, for pennies.',

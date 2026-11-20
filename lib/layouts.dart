@@ -47,11 +47,15 @@ class Statement extends StatelessWidget {
     this.size = 50,
     this.color,
     this.reveal = false,
+    this.below = const {},
   });
   final String text;
   final double size;
   final Color? color;
   final bool reveal;
+
+  /// Extra widgets shown under a line (by index), fading with it.
+  final Map<int, Widget> below;
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +80,12 @@ class Statement extends StatelessWidget {
                 child: AnimatedOpacity(
                   opacity: i <= shown ? 1 : 0,
                   duration: const Duration(milliseconds: 300),
-                  child: _rich(line, style),
+                  child: Column(
+                    children: [
+                      _rich(line, style),
+                      ?below[i],
+                    ],
+                  ),
                 ),
               ),
           ],
