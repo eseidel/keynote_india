@@ -282,8 +282,6 @@ class _Letters {
   late final List<double> delays, feet;
   final floors = <int, double>{};
 
-  Size get size => line.size;
-
   void dispose() {
     line.dispose();
     under.dispose();
