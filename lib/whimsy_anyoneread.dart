@@ -126,6 +126,14 @@ class _ReadersPainter extends CustomPainter {
 
   static const _glass = Color(0xFF0D1117);
   static const _white = Color(0xFFF4F7FB);
+  static const _headsetGrey = Color(0xFF55606F);
+  static final _headset = Paint()..color = _headsetGrey;
+  static final _ledge = Paint()..color = _white.withValues(alpha: 0.12);
+  static final _frames = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 3.5
+    ..color = _glass;
+  static final _beanieBand = Paint()..color = const Color(0xFFD98F3E);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -143,7 +151,7 @@ class _ReadersPainter extends CustomPainter {
         cx + half * ledgeIn,
         ledgeY + 4,
       ),
-      Paint()..color = _white.withValues(alpha: 0.12),
+      _ledge,
     );
 
     // Reading: a shared gaze target sweeps the line, left to right, then
@@ -236,24 +244,25 @@ class _ReadersPainter extends CustomPainter {
           hair,
         );
       case _Hair.beanie:
-        canvas.drawPath(
-          Path()
-            ..addArc(top.inflate(2), math.pi, math.pi)
-            ..close(),
-          hair..color = p.hairColor,
+        // A knit cap that stops above the glasses: the band sits where the
+        // brows would be, so the face below it still reads as a face.
+        canvas.save();
+        canvas.clipRect(
+          Rect.fromLTRB(c.dx - r - 8, 0, c.dx + r + 8, c.dy - 34),
         );
+        canvas.drawOval(
+          Rect.fromLTRB(c.dx - r - 1, c.dy - r - 16, c.dx + r + 1, c.dy - 6),
+          hair,
+        );
+        canvas.restore();
         canvas.drawRRect(
           RRect.fromRectAndRadius(
-            Rect.fromLTRB(c.dx - r - 3, c.dy - 14, c.dx + r + 3, c.dy - 2),
+            Rect.fromLTRB(c.dx - r - 4, c.dy - 41, c.dx + r + 4, c.dy - 28),
             const Radius.circular(6),
           ),
-          Paint()..color = const Color(0xFFD98F3E),
+          _beanieBand,
         );
-        canvas.drawCircle(
-          c + Offset(0, -r - 6),
-          8,
-          Paint()..color = const Color(0xFFD98F3E),
-        );
+        canvas.drawCircle(c + Offset(0, -r - 18), 9, _beanieBand);
       case _Hair.bun:
         canvas.drawPath(
           Path()
@@ -304,7 +313,7 @@ class _ReadersPainter extends CustomPainter {
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = 6
-            ..color = const Color(0xFF55606F),
+            ..color = _headsetGrey,
         );
         for (final s in [-1.0, 1.0]) {
           canvas.drawRRect(
@@ -316,7 +325,7 @@ class _ReadersPainter extends CustomPainter {
               ),
               const Radius.circular(6),
             ),
-            Paint()..color = const Color(0xFF55606F),
+            _headset,
           );
         }
     }
@@ -324,10 +333,7 @@ class _ReadersPainter extends CustomPainter {
     // Eyes behind glasses, looking at the gaze point.
     final eyeY = c.dy - 12;
     final browLift = math.sin(nod * math.pi) * 5;
-    final frame = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.5
-      ..color = _glass;
+    final frame = _frames;
     for (final s in [-1.0, 1.0]) {
       final e = Offset(c.dx + s * 17, eyeY);
       canvas.drawCircle(e, 9, fill..color = _white);
@@ -346,15 +352,17 @@ class _ReadersPainter extends CustomPainter {
       } else {
         canvas.drawCircle(e, 13, frame);
       }
-      // Brows, raised for the nod.
-      canvas.drawLine(
-        e + Offset(-8, -20 - browLift),
-        e + Offset(8, -21 - browLift),
-        Paint()
-          ..strokeWidth = 4
-          ..strokeCap = StrokeCap.round
-          ..color = p.hair == _Hair.beanie ? _glass : p.hairColor,
-      );
+      // Brows, raised for the nod (under a beanie the band is the brow).
+      if (p.hair != _Hair.beanie) {
+        canvas.drawLine(
+          e + Offset(-8, -20 - browLift),
+          e + Offset(8, -21 - browLift),
+          Paint()
+            ..strokeWidth = 4
+            ..strokeCap = StrokeCap.round
+            ..color = p.hairColor,
+        );
+      }
     }
     // Bridge.
     canvas.drawLine(
