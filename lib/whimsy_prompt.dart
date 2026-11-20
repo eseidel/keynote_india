@@ -20,6 +20,8 @@ class PromptBox extends StatefulWidget {
 
 const _typeStart = 700; // ms: the empty box shows first
 const _blinkAfter = 1300; // ms of caret blinking once typed
+const _caretGap = 4.0; // px between the last character and the caret
+const _caretWidth = 5.0;
 
 class _PromptBoxState extends State<PromptBox>
     with SingleTickerProviderStateMixin {
@@ -83,7 +85,10 @@ class _PromptBoxState extends State<PromptBox>
             final caretOn =
                 !_clock.isAnimating ||
                 (typed > 0 && !done) ||
-                math.cos(ms / 1060 * 2 * math.pi) > -0.3;
+                // Blink phase counts from the last keystroke, so the caret
+                // stays lit for a beat after the question is complete.
+                math.cos((done ? ms - _at.last : ms) / 1060 * 2 * math.pi) >
+                    -0.3;
             final ready = ((ms - _at.first) / 180).clamp(0.0, 1.0);
             // The send button bounces once when the question is complete.
             final pop = done ? ((ms - _at.last) / 450).clamp(0.0, 1.0) : 0.0;
@@ -179,7 +184,9 @@ class _TypedPainter extends CustomPainter {
         ),
         textDirection: TextDirection.ltr,
       )..layout(maxWidth: size.width);
-      ph.paint(canvas, Offset.zero);
+      // Like a real composer: the caret sits at the start, the
+      // placeholder just after it, not under it.
+      ph.paint(canvas, const Offset(_caretGap + _caretWidth + 10, 0));
       ph.dispose();
     } else {
       tp.paint(canvas, Offset.zero);
@@ -189,7 +196,12 @@ class _TypedPainter extends CustomPainter {
       final line = tp.preferredLineHeight;
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromLTWH(at.dx + 4, at.dy + line * 0.12, 5, line * 0.78),
+          Rect.fromLTWH(
+            at.dx + _caretGap,
+            at.dy + line * 0.12,
+            _caretWidth,
+            line * 0.78,
+          ),
           const Radius.circular(2),
         ),
         Paint()..color = Palette.accent,
