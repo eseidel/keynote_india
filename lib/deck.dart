@@ -15,6 +15,7 @@ import 'whimsy_cover.dart';
 import 'whimsy_dash.dart';
 import 'whimsy_developers.dart';
 import 'whimsy_drift.dart';
+import 'whimsy_drivers.dart';
 import 'whimsy_future.dart';
 import 'whimsy_glitch.dart';
 import 'whimsy_halfmillion.dart';
@@ -416,7 +417,7 @@ final List<Slide> deck = [
     section: Section.flutter,
   ),
   const Slide(
-    Statement('Flutter was built for humans'),
+    DriversStatement('Flutter was built for humans'),
     section: Section.flutter,
     notes: 'Built for humans to drive. Now agents drive, and everyone is trying something.',
   ),
