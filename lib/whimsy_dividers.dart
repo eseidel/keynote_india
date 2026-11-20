@@ -34,8 +34,20 @@ class _DividerEntranceState extends State<DividerEntrance>
     duration: const Duration(milliseconds: _totalMs),
   )..forward();
 
+  late _Letters _letters = _Letters(widget.title, headline(54));
+
+  @override
+  void didUpdateWidget(DividerEntrance old) {
+    super.didUpdateWidget(old);
+    if (old.title != widget.title) {
+      _letters.dispose();
+      _letters = _Letters(widget.title, headline(54));
+    }
+  }
+
   @override
   void dispose() {
+    _letters.dispose();
     _clock.dispose();
     super.dispose();
   }
@@ -92,9 +104,7 @@ class _DividerEntranceState extends State<DividerEntrance>
               // At rest it's the plain Text; while rising, a painter draws
               // the same layout letter by letter over an invisible copy.
               CustomPaint(
-                foregroundPainter: done
-                    ? null
-                    : _RisingPainter(widget.title, titleStyle, ms),
+                foregroundPainter: done ? null : _RisingPainter(_letters, ms),
                 child: Opacity(
                   opacity: done ? 1 : 0,
                   child: Text(widget.title, style: titleStyle),
@@ -108,81 +118,109 @@ class _DividerEntranceState extends State<DividerEntrance>
   }
 }
 
-class _RisingPainter extends CustomPainter {
-  _RisingPainter(this.text, this.style, this.ms);
+/// The title, laid out once: where each letter sits, plus one small painter
+/// per (letter, fade step), so a frame only clips and paints glyphs.
+class _Letters {
+  _Letters(this.text, this.style);
   final String text;
   final TextStyle style;
-  final double ms;
+  double? _width;
+  final _cells = <({String glyph, Rect cell, int k})>[];
+  final _glyphs = <(String, int), (TextPainter, double)>{};
+  int _total = 0;
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    // The whole title, for where each line sits; then each line on its own,
-    // so a letter's clip never catches the line above it.
+  static const fadeSteps = 10;
+
+  void _layout(double width) {
+    if (_width == width) return;
+    _width = width;
+    _cells.clear();
     final whole = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: TextDirection.ltr,
-    )..layout(maxWidth: size.width + 1);
-    final lineH = style.fontSize! * style.height!;
-    final total = text.replaceAll(RegExp(r'\s'), '').length;
-    var k = 0; // letters so far, across lines
-    var at = 0; // index of this line's first character in [text]
-    for (final line in text.split('\n')) {
-      final top = line.isEmpty
-          ? 0.0
-          : whole
-                .getBoxesForSelection(
-                  TextSelection(baseOffset: at, extentOffset: at + 1),
-                )
-                .first
-                .top;
-      final tp = TextPainter(
-        text: TextSpan(text: line, style: style),
-        textDirection: TextDirection.ltr,
-      )..layout(maxWidth: size.width + 1);
-      for (var i = 0; i < line.length; i++) {
-        if (line[i].trim().isEmpty) continue;
-        final start =
-            _lettersFrom + (total < 2 ? 0 : _lettersSpread * k / (total - 1));
-        k++;
-        final u = ((ms - start) / _letterMs).clamp(0.0, 1.0);
-        if (u == 0) continue;
-        final e = Curves.easeOutCubic.transform(u);
-        final boxes = tp.getBoxesForSelection(
-          TextSelection(baseOffset: i, extentOffset: i + 1),
+    )..layout(maxWidth: width + 1);
+    var at = 0;
+    for (final g in text.characters) {
+      final end = at + g.length;
+      if (g.trim().isNotEmpty) {
+        final boxes = whole.getBoxesForSelection(
+          TextSelection(baseOffset: at, extentOffset: end),
         );
-        if (boxes.isEmpty) continue;
-        // Clip to this letter's cell, so it rises out of its own baseline
-        // (and neighbours, at their own heights, don't bleed into it).
-        final clip = boxes.first.toRect().shift(Offset(0, top));
-        final dy = lineH * 0.7 * (1 - e);
-        canvas.save();
-        canvas.clipRect(
-          Rect.fromLTRB(
-            clip.left,
-            clip.top - lineH * 0.2,
-            clip.right,
-            clip.bottom,
-          ),
-        );
-        if (u < 1) {
-          canvas.saveLayer(
-            clip.inflate(lineH),
-            Paint()..color = Color.fromRGBO(0, 0, 0, (u * 2).clamp(0.0, 1.0)),
-          );
-          tp.paint(canvas, Offset(0, top + dy));
-          canvas.restore();
-        } else {
-          tp.paint(canvas, Offset(0, top + dy));
+        if (boxes.isNotEmpty) {
+          _cells.add((glyph: g, cell: boxes.first.toRect(), k: _cells.length));
         }
-        canvas.restore();
       }
-      tp.dispose();
-      at += line.length + 1;
+      at = end;
     }
+    _total = _cells.length;
     whole.dispose();
   }
 
+  /// [glyph] at fade [step] (of [fadeSteps]), and where its cell starts
+  /// inside its own painter.
+  (TextPainter, double) _glyph(String glyph, int step) =>
+      _glyphs.putIfAbsent((glyph, step), () {
+        final base = style.color ?? Palette.text;
+        final tp = TextPainter(
+          text: TextSpan(
+            text: glyph,
+            style: style.copyWith(
+              color: base.withValues(alpha: base.a * step / fadeSteps),
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+        final boxes = tp.getBoxesForSelection(
+          TextSelection(baseOffset: 0, extentOffset: glyph.length),
+        );
+        return (tp, boxes.isEmpty ? 0.0 : boxes.first.left);
+      });
+
+  void paint(Canvas canvas, Size size, double ms) {
+    _layout(size.width);
+    final lineH = style.fontSize! * style.height!;
+    for (final c in _cells) {
+      final start =
+          _lettersFrom + (_total < 2 ? 0 : _lettersSpread * c.k / (_total - 1));
+      final u = ((ms - start) / _letterMs).clamp(0.0, 1.0);
+      if (u == 0) continue;
+      final e = Curves.easeOutCubic.transform(u);
+      final step = ((u * 2).clamp(0.0, 1.0) * fadeSteps).ceil();
+      final (tp, left) = _glyph(c.glyph, step);
+      final dy = lineH * 0.7 * (1 - e);
+      // Clip at the cell's bottom, so the letter rises out of its own
+      // baseline; only this glyph is drawn, so the sides can be generous.
+      canvas.save();
+      canvas.clipRect(
+        Rect.fromLTRB(
+          c.cell.left - lineH * 0.3,
+          c.cell.top - lineH * 0.2,
+          c.cell.right + lineH * 0.3,
+          c.cell.bottom,
+        ),
+      );
+      tp.paint(canvas, Offset(c.cell.left - left, c.cell.top + dy));
+      canvas.restore();
+    }
+  }
+
+  void dispose() {
+    for (final (tp, _) in _glyphs.values) {
+      tp.dispose();
+    }
+    _glyphs.clear();
+  }
+}
+
+class _RisingPainter extends CustomPainter {
+  _RisingPainter(this.letters, this.ms);
+  final _Letters letters;
+  final double ms;
+
+  @override
+  void paint(Canvas canvas, Size size) => letters.paint(canvas, size, ms);
+
   @override
   bool shouldRepaint(_RisingPainter old) =>
-      old.ms != ms || old.text != text || old.style != style;
+      old.ms != ms || old.letters != letters;
 }
