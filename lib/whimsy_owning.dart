@@ -162,7 +162,14 @@ class _Letters {
     first = _packed(text, style, _derange(n, r));
     second = _packed(text, style, _derange(n, r));
     delays = [for (var i = 0; i < n; i++) r.nextDouble() * _maxDelay];
-    baseline = line.computeLineMetrics().first.baseline;
+    // Each letter's ink bottom below its box top: the baseline, or lower
+    // for g and j. Letters spin about it, as on slide 51.
+    final lm = line.computeLineMetrics().first;
+    final letters = text.replaceAll(' ', '');
+    feet = [
+      for (var i = 0; i < n; i++)
+        lm.baseline + ('gjpqy'.contains(letters[i]) ? lm.descent * 0.8 : 0),
+    ];
   }
 
   /// Where each letter's center sits when the letters are rearranged by
@@ -228,10 +235,7 @@ class _Letters {
 
   /// Letter i's center x after the first and second shuffles.
   late final List<double> first, second;
-  late final List<double> delays;
-  late final double baseline;
-
-  Size get size => line.size;
+  late final List<double> delays, feet;
 
   void dispose() {
     line.dispose();
@@ -303,7 +307,7 @@ class _ShufflePainter extends CustomPainter {
       }
       // Rotation only: the glyph scale stays 1, so Impeller reuses the
       // glyphs it already rasterized.
-      final pivot = Offset(box.center.dx, l.baseline);
+      final pivot = Offset(box.center.dx, l.feet[i]);
       canvas.save();
       canvas.translate(pos.dx, pivot.dy + pos.dy);
       if (spin != 0) canvas.rotate(spin);
