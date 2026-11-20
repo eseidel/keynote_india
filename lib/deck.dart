@@ -324,7 +324,8 @@ final List<Slide> deck = [
         title: 'Bring your whole stack',
         examples: 'The web, Flutter, game engines',
         upside: 'Most portability and control; test anywhere',
-        downside: 'You carry the stack, and mimic each platform’s look and feel',
+        downside:
+            'You carry the stack, and mimic each platform’s look and feel',
       ),
       diagram: CarryStackDiagram(),
     ),

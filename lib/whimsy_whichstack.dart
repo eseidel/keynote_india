@@ -297,10 +297,7 @@ class _StacksPainter extends CustomPainter {
     // Never let it pass through the floor: lift it so its lowest corner
     // rests on the floor line (it then tips flat about that corner).
     final c = math.cos(a), sn = math.sin(a);
-    final lowest = math.max(
-      (w / 2 * sn).abs(),
-      (w / 2 * sn).abs() - _h * c,
-    );
+    final lowest = math.max((w / 2 * sn).abs(), (w / 2 * sn).abs() - _h * c);
     if (p.dy + lowest > floor) p = Offset(p.dx, floor - lowest);
     _paintBlock(canvas, p, a, w, _h, color);
   }
