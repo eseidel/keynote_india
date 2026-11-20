@@ -9,6 +9,7 @@ import 'whimsy_drift.dart';
 import 'whimsy_future.dart';
 import 'whimsy_glitch.dart';
 import 'whimsy_pixels.dart';
+import 'whimsy_software.dart';
 import 'whimsy_tokens.dart';
 import 'whimsy_truth.dart';
 import 'whimsy_weird.dart';
@@ -421,7 +422,7 @@ final List<Slide> deck = [
     notes: 'Our job is still to deliver value to customers through technology. That core hasn\'t moved.',
   ),
   const Slide(
-    Statement('A lot more software'),
+    SoftwareSlide('A lot more software'),
     section: Section.us,
     notes: '10x, 100x, 1000x more software. Software has been eating the world for 20-30 years and will keep on. An insatiable appetite for software, and for people who own it.',
   ),
