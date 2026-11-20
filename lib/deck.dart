@@ -501,6 +501,7 @@ final List<Slide> deck = [
       title: 'Thank you',
       logo: img('g3b572bde633_0_186.png'),
       logoOverlay: const LandingBird(),
+      contact: 'eric@shorebird.dev',
     ),
     cover: true,
     notes: 'Find me after, or at the Shorebird booth. Shorebird OTA talk at 17:35.',

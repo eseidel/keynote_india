@@ -34,11 +34,7 @@ class _DriftSlideState extends State<DriftSlide>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            widget.text,
-            textAlign: TextAlign.center,
-            style: headline(50),
-          ),
+          Text(widget.text, textAlign: TextAlign.center, style: headline(50)),
           const SizedBox(height: 110),
           AnimatedBuilder(
             animation: _drift,

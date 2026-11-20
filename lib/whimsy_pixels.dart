@@ -60,10 +60,7 @@ class _PixelStatementState extends State<PixelStatement>
       ..translate(pad, pad);
     _tp.paint(c, Offset.zero);
     final pic = rec.endRecording();
-    _atlas = pic.toImageSync(
-      (w * atlasScale).ceil(),
-      (h * atlasScale).ceil(),
-    );
+    _atlas = pic.toImageSync((w * atlasScale).ceil(), (h * atlasScale).ceil());
     pic.dispose();
 
     final cols = (w / cell).ceil(), rows = (h / cell).ceil();
@@ -171,9 +168,7 @@ class _PixelStatementState extends State<PixelStatement>
         },
         onExit: (_) => _mouse = null,
         child: SizedBox.expand(
-          child: CustomPaint(
-            painter: _PixelPainter(this, origin),
-          ),
+          child: CustomPaint(painter: _PixelPainter(this, origin)),
         ),
       );
     },

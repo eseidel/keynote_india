@@ -80,12 +80,7 @@ class Statement extends StatelessWidget {
                 child: AnimatedOpacity(
                   opacity: i <= shown ? 1 : 0,
                   duration: const Duration(milliseconds: 300),
-                  child: Column(
-                    children: [
-                      _rich(line, style),
-                      ?below[i],
-                    ],
-                  ),
+                  child: Column(children: [_rich(line, style), ?below[i]]),
                 ),
               ),
           ],
@@ -103,8 +98,12 @@ class Cover extends StatelessWidget {
     this.byline,
     this.logo,
     this.logoOverlay,
+    this.contact,
   });
   final String title;
+
+  /// A line under the title, such as an email address.
+  final String? contact;
   final List<String>? byline;
   final String? logo;
 
@@ -130,6 +129,13 @@ class Cover extends StatelessWidget {
           const SizedBox(height: 24),
         ],
         Text(title, style: headline(logo == null ? 40 : 80)),
+        if (contact != null) ...[
+          const SizedBox(height: 28),
+          Text(
+            contact!,
+            style: zalando(30, weight: 500, color: Palette.accent),
+          ),
+        ],
         if (byline != null) ...[
           const SizedBox(height: 48),
           Container(
@@ -600,10 +606,7 @@ class _Graph extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 24),
-          Text(
-            '$n copies',
-            style: zalando(16, color: Palette.muted),
-          ),
+          Text('$n copies', style: zalando(16, color: Palette.muted)),
           const SizedBox(height: 8),
           Text(
             '$done ${done == 1 ? 'link' : 'links'}',

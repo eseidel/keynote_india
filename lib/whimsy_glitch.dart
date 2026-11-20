@@ -153,13 +153,20 @@ class _Bands extends CustomClipper<Path> {
     final b = Path();
     for (final (top, h) in bands) {
       b.addRect(
-        Rect.fromLTWH(-200, top * size.height, size.width + 400, h * size.height),
+        Rect.fromLTWH(
+          -200,
+          top * size.height,
+          size.width + 400,
+          h * size.height,
+        ),
       );
     }
     if (keep) return b;
     return Path.combine(
       PathOperation.difference,
-      Path()..addRect(Rect.fromLTWH(-200, -50, size.width + 400, size.height + 100)),
+      Path()..addRect(
+        Rect.fromLTWH(-200, -50, size.width + 400, size.height + 100),
+      ),
       b,
     );
   }

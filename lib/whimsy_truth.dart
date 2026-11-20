@@ -28,10 +28,8 @@ class _SingleSourceState extends State<SingleSource>
   }
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-    painter: _SourcePainter(_t),
-    child: const SizedBox.expand(),
-  );
+  Widget build(BuildContext context) =>
+      CustomPaint(painter: _SourcePainter(_t), child: const SizedBox.expand());
 }
 
 /// Readers around the file: (angle in turns from 12 o'clock, is an agent).
@@ -120,14 +118,7 @@ class _SourcePainter extends CustomPainter {
       );
     }
     // The one file, glowing once the copies have merged into it.
-    _file(
-      canvas,
-      c,
-      alpha: merge,
-      color: Palette.accent,
-      glow: merge,
-      tilt: 0,
-    );
+    _file(canvas, c, alpha: merge, color: Palette.accent, glow: merge, tilt: 0);
 
     for (var i = 0; i < _readers.length; i++) {
       final k = appear[i];
