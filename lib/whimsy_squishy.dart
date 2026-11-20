@@ -150,7 +150,8 @@ class _JellyPainter extends CustomPainter {
         dy = -150 * (1 - f * f);
         sy = 1.14;
         sx = 0.92;
-        alpha = (f * 3).clamp(0.0, 1.0);
+        // In tenths, so the glyph cache holds a few painters, not one a frame.
+        alpha = ((f * 3).clamp(0.0, 1.0) * 10).roundToDouble() / 10;
       } else if (tau > 0) {
         if (drop) tau -= _fall;
         // Landed: squash and stretch around the baseline, keeping volume,
@@ -228,6 +229,16 @@ class _SlotWordState extends State<SlotWord>
     duration: Duration(milliseconds: _total),
   )..forward();
   List<_Glyphs>? _glyphs; // one layout per answer
+  List<TextPainter>? _labels; // "ASK #n", one per answer
+
+  @override
+  void initState() {
+    super.initState();
+    assert(
+      widget.tries.every((t) => t.length == widget.word.length),
+      'each try must be as long as "${widget.word}" (pad with spaces)',
+    );
+  }
 
   @override
   void didChangeDependencies() {
@@ -235,11 +246,28 @@ class _SlotWordState extends State<SlotWord>
     _disposeGlyphs();
     final style = DefaultTextStyle.of(context).style.merge(verdictWord);
     _glyphs = [for (final a in _answers) _Glyphs(a, style)];
+    _labels = [
+      for (var j = 0; j < _answers.length; j++)
+        TextPainter(
+          text: TextSpan(
+            text: 'ASK #${j + 1}',
+            style: zalando(
+              16,
+              weight: 700,
+              color: Palette.muted,
+            ).copyWith(letterSpacing: 3),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout(),
+    ];
   }
 
   void _disposeGlyphs() {
     for (final g in _glyphs ?? const <_Glyphs>[]) {
       g.dispose();
+    }
+    for (final l in _labels ?? const <TextPainter>[]) {
+      l.dispose();
     }
   }
 
@@ -259,6 +287,7 @@ class _SlotWordState extends State<SlotWord>
         size: _glyphs!.last.size,
         painter: _SlotPainter(
           glyphs: _glyphs!,
+          labels: _labels!,
           pulls: _pulls,
           ms: _clock.value * _total,
           stagger: _stagger,
@@ -272,12 +301,14 @@ class _SlotWordState extends State<SlotWord>
 class _SlotPainter extends CustomPainter {
   _SlotPainter({
     required this.glyphs,
+    required this.labels,
     required this.pulls,
     required this.ms,
     required this.stagger,
     required this.fadeFrom,
   });
   final List<_Glyphs> glyphs;
+  final List<TextPainter> labels;
   final List<(int, int)> pulls;
   final double ms;
   final int stagger;
@@ -289,9 +320,11 @@ class _SlotPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final word = glyphs.last;
     final h = word.size.height;
-    // The reel window: the line's box (a little more for descenders), fading
-    // out at top and bottom so letters roll over a drum out of sight.
-    final window = Rect.fromLTRB(-60, 0, size.width + 600, 1.15 * h);
+    final widest = glyphs.map((g) => g.size.width).reduce(math.max);
+    // The reel window: the line's box (a little more for descenders, and
+    // for any answer wider than the word), fading out at top and bottom so
+    // letters roll over a drum out of sight.
+    final window = Rect.fromLTRB(-60, 0, widest + 60, 1.15 * h);
     canvas.saveLayer(window, Paint());
     // The current pull: the last one started.
     var j = 0;
@@ -333,8 +366,17 @@ class _SlotPainter extends CustomPainter {
       final box = answer.boxes[k];
       final blur = (speed * h / 260).clamp(0.0, 22.0);
       if (blur > 0.5) {
+        // Blur just this reel's column: letters are centred on this
+        // answer's (or the previous one's) box, and none is wider than h.
+        final prev = j > 0 ? glyphs[j - 1].boxes[k] : box;
+        final column = Rect.fromLTRB(
+          math.min(box.center.dx, prev.center.dx) - h / 2,
+          window.top,
+          math.max(box.center.dx, prev.center.dx) + h / 2,
+          window.bottom,
+        );
         canvas.saveLayer(
-          null,
+          column,
           Paint()
             ..imageFilter = ui.ImageFilter.blur(
               sigmaX: 0,
@@ -384,28 +426,25 @@ class _SlotPainter extends CustomPainter {
     canvas.restore();
     // Which try this is, beside the word, fading once the last one lands.
     final fade = ((ms - fadeFrom) / 500).clamp(0.0, 1.0);
-    final label = TextPainter(
-      text: TextSpan(
-        text: 'ASK #${j + 1}',
-        style: zalando(
-          16,
-          weight: 700,
-          color: Palette.muted.withValues(alpha: 1 - fade),
-        ).copyWith(letterSpacing: 3),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    label.paint(
-      canvas,
-      Offset(
-        glyphs.map((g) => g.size.width).reduce(math.max) + 48,
-        word.baseline -
-            label.computeDistanceToActualBaseline(TextBaseline.alphabetic),
-      ),
+    if (fade >= 1) return;
+    final label = labels[j];
+    final at = Offset(
+      widest + 48,
+      word.baseline -
+          label.computeDistanceToActualBaseline(TextBaseline.alphabetic),
     );
-    label.dispose();
+    // Laid out once; faded with one small layer, only while it fades.
+    if (fade > 0) {
+      canvas.saveLayer(
+        (at & label.size).inflate(4),
+        Paint()..color = Color.from(alpha: 1 - fade, red: 0, green: 0, blue: 0),
+      );
+    }
+    label.paint(canvas, at);
+    if (fade > 0) canvas.restore();
   }
 
   @override
-  bool shouldRepaint(_SlotPainter old) => old.ms != ms || old.glyphs != glyphs;
+  bool shouldRepaint(_SlotPainter old) =>
+      old.ms != ms || old.glyphs != glyphs || old.labels != labels;
 }
