@@ -286,23 +286,26 @@ class LogoWall extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(140, 40, 140, 110),
-    child: GridView.count(
-      crossAxisCount: 2,
-      childAspectRatio: 2.0,
-      mainAxisSpacing: 30,
-      crossAxisSpacing: 60,
-      physics: const NeverScrollableScrollPhysics(),
-      children: [
-        for (final (image, caption) in items)
-          Column(
-            children: [
-              Expanded(child: Picture(image)),
-              const SizedBox(height: 12),
-              Text(caption, style: zalando(16, color: Palette.muted)),
-            ],
-          ),
-      ],
+    padding: const EdgeInsets.fromLTRB(140, 75, 140, 75),
+    child: Center(
+      child: GridView.count(
+        shrinkWrap: true,
+        crossAxisCount: 2,
+        childAspectRatio: 2.0,
+        mainAxisSpacing: 30,
+        crossAxisSpacing: 60,
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          for (final (image, caption) in items)
+            Column(
+              children: [
+                Expanded(child: Picture(image)),
+                const SizedBox(height: 12),
+                Text(caption, style: zalando(16, color: Palette.muted)),
+              ],
+            ),
+        ],
+      ),
     ),
   );
 }
