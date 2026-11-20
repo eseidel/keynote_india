@@ -241,8 +241,8 @@ class _PresenterState extends State<Presenter> {
                             children: [
                               // Clip the slide to its canvas: whimsy that
                               // bleeds off an edge must not show in the black
-                              // bars on a screen that isn't 16:9. The shatter
-                              // below stays unclipped so its glass flies free.
+                              // bars on a screen that isn't 16:9. (The shatter
+                              // overlay below is already canvas-sized.)
                               ClipRect(
                                 child: AnimatedSwitcher(
                                   duration: shatter != null
