@@ -20,6 +20,7 @@ import 'whimsy_intent.dart';
 import 'whimsy_learning.dart';
 import 'whimsy_nohands.dart';
 import 'whimsy_pixels.dart';
+import 'whimsy_prompt.dart';
 import 'whimsy_sixty.dart';
 import 'whimsy_software.dart';
 import 'whimsy_squishy.dart';
@@ -67,7 +68,7 @@ final List<Slide> deck = [
     notes: 'Thanks, Greg. Every tool is up in the air.',
   ),
   const Slide(
-    Statement('“Why not prompt once and get two native apps?”', size: 40),
+    PromptBox('Why not prompt once and get two native apps?'),
     notes: "The question going around online. It's wrong, and here's why.",
   ),
   Slide(
