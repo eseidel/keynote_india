@@ -171,14 +171,17 @@ class _SkylinePainter extends CustomPainter {
         ..color = Palette.warn.withValues(alpha: 0.30 * sun)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 90),
     );
-    // Rays: rounded capsules that fly in and lock into a ring.
+    // Rays: rounded capsules that fly in and lock into a ring. They fan
+    // across the upper ~230 degrees only: the sun sits 100px above the
+    // horizon, so anything lower would be clipped to a stub.
     const rays = 18;
+    const fan = 230 * math.pi / 180;
     for (var i = 0; i < rays; i++) {
       final start = 0.62 + i / rays * 0.22;
       final k = _seg(v, start, start + 0.1);
       if (k <= 0) continue;
       final e = Curves.easeOutBack.transform(k);
-      final a = -math.pi / 2 + (i - rays / 2) / rays * 2 * math.pi;
+      final a = -math.pi / 2 + (i / (rays - 1) - 0.5) * fan;
       final spin = (1 - e) * 0.9;
       final r = _sunRadius + 30 + (1 - e) * 140;
       canvas.save();
@@ -213,13 +216,13 @@ class _SkylinePainter extends CustomPainter {
     );
     // Bands across the disc, like a retro sunrise, cut in background color.
     final band = Paint()..color = Palette.background.withValues(alpha: 0.55);
+    canvas.clipRRect(
+      RRect.fromRectAndRadius(disc, const Radius.circular(_sunRadius)),
+    );
     for (var i = 0; i < 4; i++) {
       final y = c.dy + _sunRadius * (0.25 + i * 0.19);
       final hgt = 6.0 + i * 4;
-      canvas.save();
-      canvas.clipPath(Path()..addOval(disc));
       canvas.drawRect(Rect.fromLTRB(disc.left, y, disc.right, y + hgt), band);
-      canvas.restore();
     }
     canvas.restore();
   }
@@ -234,9 +237,13 @@ class _SkylinePainter extends CustomPainter {
     canvas.clipRect(Rect.fromLTRB(0, 0, 1920, _ground));
     canvas.translate(0, dy);
     final top = _ground - tw.h;
+    // The gradients span the visible tower; the shape itself runs well
+    // below the horizon (clipped there) so the easeOutBack overshoot, which
+    // lifts a tower up to ~0.1 * (h + 40) past its rest, never shows a gap
+    // between its base and the ground.
     final body = Rect.fromLTWH(tw.x, top, tw.w, tw.h + 8);
     final rr = RRect.fromRectAndCorners(
-      body,
+      Rect.fromLTWH(tw.x, top, tw.w, tw.h + 80),
       topLeft: const Radius.circular(14),
       topRight: const Radius.circular(14),
     );
