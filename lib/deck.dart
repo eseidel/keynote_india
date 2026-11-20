@@ -28,6 +28,7 @@ import 'whimsy_software.dart';
 import 'whimsy_squishy.dart';
 import 'whimsy_tokens.dart';
 import 'whimsy_truth.dart';
+import 'whimsy_verify.dart';
 import 'whimsy_weird.dart';
 import 'whimsy_whichstack.dart';
 
@@ -224,7 +225,7 @@ final List<Slide> deck = [
     notes: "Google teams moving to Flutter reported moving about 3x faster. The third x was the organization: two copies plus the link between them. Every copy you add has to stay in sync with every other one: three things is a triangle, five is a pentagram. You can build abstractions over them, but that's just sharing code.",
   ),
   const Slide(
-    Statement('Verify one thing, not two'),
+    VerifySlide('Verify one thing, not two'),
     section: Section.flutter,
     notes: 'Nobody reads the code anymore. Verification is the job, so verify one thing.',
   ),
