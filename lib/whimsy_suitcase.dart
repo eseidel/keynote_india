@@ -43,18 +43,17 @@ class _PortableStatementState extends State<PortableStatement>
         padding: const EdgeInsets.only(bottom: _lift * 2),
         child: Statement(widget.text),
       ),
-      LayoutBuilder(
-        builder: (context, box) => Stack(
-          children: [
-            Positioned(
-              left: box.maxWidth / 2 - _SuitcasePainter.size.width / 2,
-              top: box.maxHeight / 2 + 110,
-              child: CustomPaint(
-                size: _SuitcasePainter.size,
-                painter: _SuitcasePainter(_clock),
-              ),
-            ),
-          ],
+      // The suitcase's box starts [_lift] below the slide's center: the
+      // padding pushes it down by half its own height plus [_lift].
+      Center(
+        child: Padding(
+          padding: EdgeInsets.only(
+            top: 2 * _lift + _SuitcasePainter.size.height,
+          ),
+          child: CustomPaint(
+            size: _SuitcasePainter.size,
+            painter: _SuitcasePainter(_clock),
+          ),
         ),
       ),
     ],
@@ -93,8 +92,6 @@ class _SuitcasePainter extends CustomPainter {
   static const _tanLight = Color(0xFFE0AD74);
   static const _brass = Color(0xFFF1C35A);
   static const _flutterBlue = Color(0xFF0468D7);
-
-  static const _white = Colors.white;
 
   static final List<_Sticker> _stickers = [
     (
@@ -254,25 +251,7 @@ class _SuitcasePainter extends CustomPainter {
     );
     // Brass corners.
     final corner = Paint()..color = _brass;
-    for (final (x, y, sx, sy) in [
-      (_body.left, _body.top, 1.0, 1.0),
-      (_body.right, _body.top, -1.0, 1.0),
-      (_body.left, _body.bottom, 1.0, -1.0),
-      (_body.right, _body.bottom, -1.0, -1.0),
-    ]) {
-      canvas.drawPath(
-        Path()
-          ..moveTo(x, y + sy * 34)
-          ..lineTo(x, y + sy * 18)
-          ..quadraticBezierTo(x, y, x + sx * 18, y)
-          ..lineTo(x + sx * 34, y)
-          ..lineTo(x + sx * 34, y + sy * 8)
-          ..lineTo(x + sx * 8, y + sy * 8)
-          ..lineTo(x + sx * 8, y + sy * 34)
-          ..close(),
-        corner,
-      );
-    }
+    canvas.drawPath(_corners, corner);
     // Latches.
     for (final x in [_body.left + 70, _body.right - 70]) {
       canvas.drawRRect(
@@ -318,13 +297,16 @@ class _SuitcasePainter extends CustomPainter {
       shape.shift(Offset(2 + 8 * (1 - p), 3 + 10 * (1 - p))),
       Paint()..color = Colors.black.withValues(alpha: 0.22 * alpha),
     );
-    canvas.drawRRect(shape, Paint()..color = _white.withValues(alpha: alpha));
+    canvas.drawRRect(
+      shape,
+      Paint()..color = Colors.white.withValues(alpha: alpha),
+    );
     canvas.drawRRect(
       shape.deflate(4),
       Paint()..color = k.color.withValues(alpha: alpha),
     );
     final ink = Paint()
-      ..color = _white.withValues(alpha: alpha)
+      ..color = Colors.white.withValues(alpha: alpha)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round
@@ -338,7 +320,12 @@ class _SuitcasePainter extends CustomPainter {
     // It drops on its string, then swings about the handle and settles.
     final s = ms / 1000;
     final drop = Curves.easeOutBack.transform((s / 0.3).clamp(0, 1));
-    final swing = 0.75 * math.exp(-s * 2.6) * math.cos(s * 8.5 - 0.3);
+    // The swing dies away, and is eased fully out by the time the clock
+    // stops, so the last frame doesn't freeze it mid-swing.
+    const end = (_totalMs - _tagStart) / 1000;
+    final fade =
+        1 - Curves.easeInOut.transform(((s - 0.6) / (end - 0.6)).clamp(0, 1));
+    final swing = 0.75 * math.exp(-s * 2.6) * math.cos(s * 8.5 - 0.3) * fade;
     const rest = -0.12;
     const hook = Offset(_SuitcasePainter._hookX, _SuitcasePainter._hookY);
     canvas.save();
@@ -360,13 +347,13 @@ class _SuitcasePainter extends CustomPainter {
     );
     canvas.drawPath(_tag, Paint()..color = _flutterBlue);
     // Eyelet.
-    canvas.drawCircle(const Offset(0, 11), 5, Paint()..color = _white);
+    canvas.drawCircle(const Offset(0, 11), 5, Paint()..color = Colors.white);
     canvas.drawCircle(const Offset(0, 11), 3, Paint()..color = _tanDark);
     // The Flutter logo, in white.
     canvas.save();
     canvas.translate(-21, 32);
     canvas.scale(0.42);
-    canvas.drawPath(_logoLight, Paint()..color = _white);
+    canvas.drawPath(_logoLight, Paint()..color = Colors.white);
     canvas.drawPath(_logoDark, Paint()..color = const Color(0xFFB9DEFF));
     canvas.restore();
     canvas.restore();
@@ -383,7 +370,30 @@ class _SuitcasePainter extends CustomPainter {
     ..lineTo(-30, 18)
     ..close();
 
-  // The tag hangs off the handle's right mount.
+  // All four brass corner caps, as one path.
+  static final Path _corners = () {
+    final p = Path();
+    for (final (x, y, sx, sy) in [
+      (_body.left, _body.top, 1.0, 1.0),
+      (_body.right, _body.top, -1.0, 1.0),
+      (_body.left, _body.bottom, 1.0, -1.0),
+      (_body.right, _body.bottom, -1.0, -1.0),
+    ]) {
+      p
+        ..moveTo(x, y + sy * 34)
+        ..lineTo(x, y + sy * 18)
+        ..quadraticBezierTo(x, y, x + sx * 18, y)
+        ..lineTo(x + sx * 34, y)
+        ..lineTo(x + sx * 34, y + sy * 8)
+        ..lineTo(x + sx * 8, y + sy * 8)
+        ..lineTo(x + sx * 8, y + sy * 34)
+        ..close();
+    }
+    return p;
+  }();
+
+  // The tag's string loops round the handle bar, just inside its right
+  // mount (the mounts sit at the body's center +-46).
   static const _hookX = 320.0, _hookY = 58.0;
 
   // The Flutter logo in a ~100x124 box: the top bar and the chevron's upper
@@ -451,20 +461,19 @@ class _SuitcasePainter extends CustomPainter {
     c.drawLine(const Offset(8, -16), const Offset(0, -9), p);
   }
 
+  static final Path _carBody = Path()
+    ..moveTo(-17, 6)
+    ..lineTo(-17, -1)
+    ..lineTo(-11, -3)
+    ..lineTo(-6, -10)
+    ..lineTo(7, -10)
+    ..lineTo(12, -3)
+    ..lineTo(17, -1)
+    ..lineTo(17, 6)
+    ..close();
+
   static void _car(Canvas c, Paint p) {
-    c.drawPath(
-      Path()
-        ..moveTo(-17, 6)
-        ..lineTo(-17, -1)
-        ..lineTo(-11, -3)
-        ..lineTo(-6, -10)
-        ..lineTo(7, -10)
-        ..lineTo(12, -3)
-        ..lineTo(17, -1)
-        ..lineTo(17, 6)
-        ..close(),
-      p,
-    );
+    c.drawPath(_carBody, p);
     final fill = Paint()..color = p.color;
     c.drawCircle(const Offset(-9, 8), 4, fill);
     c.drawCircle(const Offset(9, 8), 4, fill);
