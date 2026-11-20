@@ -7,6 +7,7 @@ import 'whimsy_approaches.dart';
 import 'whimsy_barriers.dart';
 import 'whimsy_bird.dart';
 import 'whimsy_builtown.dart';
+import 'whimsy_callback.dart';
 import 'whimsy_cambrian.dart';
 import 'whimsy_compounds.dart';
 import 'whimsy_dash.dart';
@@ -507,7 +508,7 @@ final List<Slide> deck = [
     notes: 'People, not platforms.',
   ),
   const Slide(
-    Callback(
+    StampedCallback(
       question: 'Why not prompt once and get two apps?',
       answers: ['You’d own two.', 'You’d pay 3x.', 'You’d get two answers.'],
     ),
