@@ -482,34 +482,67 @@ class Callback extends StatelessWidget {
 }
 
 /// "Two codebases: 3x the bill": every copy must stay in sync with every
-/// other, so links grow as n(n-1)/2 (a triangle at 3, a pentagram at 5).
-class SyncGraph extends StatelessWidget {
+/// other, so links grow as n(n-1)/2. When the slide appears, 2, 3 and 5
+/// copies get their links drawn one at a time, each with a running count
+/// (1 link, 3 links, 10 links), so the cost of copies is something you count.
+class SyncGraph extends StatefulWidget {
   const SyncGraph({super.key, required this.text});
   final String text;
 
+  static const copies = [2, 3, 5];
+
+  @override
+  State<SyncGraph> createState() => _SyncGraphState();
+}
+
+class _SyncGraphState extends State<SyncGraph>
+    with SingleTickerProviderStateMixin {
+  // Links are drawn back to back across the graphs; the clock counts links.
+  static const _perLink = Duration(milliseconds: 260);
+  static const _pause = 2; // links' worth of pause before each next graph
+
+  static final _starts = () {
+    final starts = <int>[];
+    var t = 2; // a beat after the slide appears
+    for (final n in SyncGraph.copies) {
+      starts.add(t);
+      t += n * (n - 1) ~/ 2 + _pause;
+    }
+    return starts..add(t);
+  }();
+
+  late final AnimationController _clock = AnimationController(
+    vsync: this,
+    duration: _perLink * _starts.last,
+  )..forward();
+
+  @override
+  void dispose() {
+    _clock.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(160, 60, 120, 60),
+    padding: const EdgeInsets.fromLTRB(160, 60, 100, 60),
     child: Row(
       children: [
-        Expanded(flex: 5, child: Text(text, style: headline(44))),
+        Expanded(flex: 5, child: Text(widget.text, style: headline(44))),
         Expanded(
-          flex: 6,
-          child: Row(
-            children: [
-              Expanded(
-                child: CustomPaint(
-                  painter: _GraphPainter(3),
-                  child: const SizedBox.expand(),
-                ),
-              ),
-              Expanded(
-                child: CustomPaint(
-                  painter: _GraphPainter(5),
-                  child: const SizedBox.expand(),
-                ),
-              ),
-            ],
+          flex: 7,
+          child: AnimatedBuilder(
+            animation: _clock,
+            builder: (context, _) {
+              final links = _clock.value * _starts.last; // in links
+              return Row(
+                children: [
+                  for (final (i, n) in SyncGraph.copies.indexed)
+                    Expanded(
+                      child: _Graph(n: n, drawn: links - _starts[i]),
+                    ),
+                ],
+              );
+            },
           ),
         ),
       ],
@@ -517,24 +550,78 @@ class SyncGraph extends StatelessWidget {
   );
 }
 
-class _GraphPainter extends CustomPainter {
-  _GraphPainter(this.n);
+/// One graph of [n] copies with [drawn] of its links drawn (fractional: the
+/// last one is partway), its copies fading in just before its first link.
+class _Graph extends StatelessWidget {
+  const _Graph({required this.n, required this.drawn});
   final int n;
+  final double drawn;
+
+  @override
+  Widget build(BuildContext context) {
+    final total = n * (n - 1) ~/ 2;
+    final done = drawn.floor().clamp(0, total);
+    final shown = (drawn + 1).clamp(0.0, 1.0); // copies fade in a link early
+    return Opacity(
+      opacity: shown,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            height: 300,
+            child: CustomPaint(
+              painter: _GraphPainter(n, drawn.clamp(0, total).toDouble()),
+              child: const SizedBox.expand(),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            '$n copies',
+            style: zalando(16, color: Palette.muted),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$done ${done == 1 ? 'link' : 'links'}',
+            style: zalando(
+              24,
+              weight: 700,
+              color: done == total ? Palette.warn : Palette.text,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GraphPainter extends CustomPainter {
+  _GraphPainter(this.n, this.drawn);
+  final int n;
+  final double drawn;
 
   @override
   void paint(Canvas canvas, Size size) {
     final c = size.center(Offset.zero);
-    final r = math.min(size.width, size.height) * 0.32;
+    final r = math.min(size.width, size.height) * 0.4;
     final pts = [
       for (var i = 0; i < n; i++)
-        c + Offset.fromDirection(-math.pi / 2 + i * 2 * math.pi / n, r),
+        c +
+            Offset.fromDirection(
+              // Two copies sit side by side; more go round a polygon.
+              n == 2 ? math.pi * i : -math.pi / 2 + i * 2 * math.pi / n,
+              r,
+            ),
     ];
     final line = Paint()
       ..color = Palette.muted
-      ..strokeWidth = 4;
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    var k = 0;
     for (var i = 0; i < n; i++) {
-      for (var j = i + 1; j < n; j++) {
-        canvas.drawLine(pts[i], pts[j], line);
+      for (var j = i + 1; j < n; j++, k++) {
+        final f = (drawn - k).clamp(0.0, 1.0);
+        if (f == 0) continue;
+        canvas.drawLine(pts[i], Offset.lerp(pts[i], pts[j], f)!, line);
       }
     }
     final dot = Paint()..color = Palette.accent;
@@ -544,7 +631,7 @@ class _GraphPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_GraphPainter old) => old.n != n;
+  bool shouldRepaint(_GraphPainter old) => old.n != n || old.drawn != drawn;
 }
 
 /// A live 3D scene filling the whole slide, title over the top and an
