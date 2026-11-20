@@ -61,6 +61,18 @@ class _BioTimelineState extends State<BioTimeline>
   double get _t => _clock.value * _total;
 
   @override
+  void initState() {
+    super.initState();
+    // One hop per line, and every line in the order exactly once.
+    assert(
+      widget.lines.length == _hops.length &&
+          (widget.order.toList()..sort()).join() ==
+              List.generate(_hops.length, (i) => i).join(),
+      'BioTimeline: order must list each of the ${_hops.length} lines once',
+    );
+  }
+
+  @override
   void dispose() {
     _clock.dispose();
     super.dispose();
@@ -137,18 +149,24 @@ class _BioTimelineState extends State<BioTimeline>
                   ],
                 ),
               ),
-              AnimatedBuilder(
-                animation: _clock,
-                builder: (_, _) => _Polaroid(widget.photo, _t),
+              // Its own layer: the photo and its shadow don't repaint
+              // with the bird or the lines.
+              RepaintBoundary(
+                child: AnimatedBuilder(
+                  animation: _clock,
+                  builder: (_, _) => _Polaroid(widget.photo, _t),
+                ),
               ),
             ],
           ),
         ),
         IgnorePointer(
-          child: CustomPaint(
-            painter: _BirdPainter(_clock, [
-              for (final i in widget.order) lineMid[i],
-            ]),
+          child: RepaintBoundary(
+            child: CustomPaint(
+              painter: _BirdPainter(_clock, [
+                for (final i in widget.order) lineMid[i],
+              ]),
+            ),
           ),
         ),
       ],
@@ -206,11 +224,19 @@ class _Polaroid extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFF4F1EB),
             borderRadius: BorderRadius.circular(6),
+            // A dark shadow alone barely reads on the dark slide, so a soft
+            // pale glow lifts the print too. Fixed blurs; only the shadow's
+            // offset follows the drop.
             boxShadow: [
               BoxShadow(
-                color: const Color(0x8C000000),
-                blurRadius: 24 + 70 * p.lift,
-                offset: Offset(10 + 30 * p.lift, 16 + 60 * p.lift),
+                color: const Color(0x33FFFFFF),
+                blurRadius: 48,
+                spreadRadius: 2,
+              ),
+              BoxShadow(
+                color: const Color(0xCC000000),
+                blurRadius: 30,
+                offset: Offset(14 + 30 * p.lift, 24 + 60 * p.lift),
               ),
             ],
           ),
