@@ -75,9 +75,14 @@ class _SheetPainter extends CustomPainter {
   _SheetPainter(this.t) : super(repaint: t);
   final Animation<double> t;
 
-  static const size = Size(760, 250);
+  // Wide enough for everything painted, including HYPERLOGLOG on the left
+  // and LEVEL UP! on the right, with the bars centered in it (and so on
+  // the slide).
+  static const size = Size(980, 260);
+  static const _top = 22.0; // room for row 1's LEVEL UP! and sparkles
   static const _rowH = 48.0;
-  static const _barX = 250.0, _barW = 380.0, _barH = 14.0;
+  static const _barW = 380.0, _barH = 14.0;
+  static const _barX = (980 - _barW) / 2;
   static const _fillMs = 750.0; // filling to the top
   static const _holdMs = 180.0; // full, a beat
   static const _resetMs = 600.0; // then XP carries into the next level
@@ -125,12 +130,12 @@ class _SheetPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final ms = t.value * _totalMs;
     for (final (i, s) in _skills.indexed) {
-      final y = i * _rowH;
+      final y = _top + i * _rowH;
       final appear = ((ms - s.startMs + 250) / 250).clamp(0.0, 1.0);
       if (appear == 0) continue;
       _row(canvas, i, s, y, ms - s.startMs, appear);
     }
-    _hyperLogLog(canvas, 3 * _rowH + 14, ms - _newMs);
+    _hyperLogLog(canvas, _top + 3 * _rowH + 14, ms - _newMs);
   }
 
   void _row(
@@ -221,6 +226,31 @@ class _SheetPainter extends CustomPainter {
       );
     }
 
+    // Sparkles burst from the end of the bar.
+    final spT = up / 800;
+    if (spT > 0 && spT < 1) {
+      final rnd = math.Random(17 + i);
+      final origin = Offset(_barX + _barW - _barH / 2, cy);
+      final e = Curves.easeOutCubic.transform(spT);
+      final fade = 1 - spT * spT;
+      for (var k = 0; k < 12; k++) {
+        final a = k / 12 * 2 * math.pi + rnd.nextDouble() * 0.4;
+        final d = 22 + 30 * rnd.nextDouble();
+        // Flattened so it spreads along the bar, though the tallest
+        // sparkles reach about 33px from the bar's center, into the gap. Painted
+        // before the level number, which stays on top.
+        final p =
+            origin + Offset(math.cos(a) * d * 1.3, math.sin(a) * d * 0.45) * e;
+        final r = (5 + 5 * rnd.nextDouble()) * (1 - 0.6 * spT);
+        _sparkle(
+          canvas,
+          p,
+          r,
+          (k.isEven ? _gold : Colors.white).withValues(alpha: fade),
+        );
+      }
+    }
+
     // Level number: pops (by scale, never font size) and glows gold.
     final lvX = _barX + _barW + 26;
     final lv = _levels[i * 2 + (leveled ? 1 : 0)];
@@ -248,29 +278,6 @@ class _SheetPainter extends CustomPainter {
       canvas.scale(s0);
       _paintText(canvas, _levelUp, Offset.zero, a.toDouble());
       canvas.restore();
-    }
-
-    // Sparkles burst from the end of the bar.
-    final spT = up / 800;
-    if (spT > 0 && spT < 1) {
-      final rnd = math.Random(17 + i);
-      final origin = Offset(_barX + _barW - _barH / 2, cy);
-      final e = Curves.easeOutCubic.transform(spT);
-      final fade = 1 - spT * spT;
-      for (var k = 0; k < 12; k++) {
-        final a = k / 12 * 2 * math.pi + rnd.nextDouble() * 0.4;
-        final d = 22 + 30 * rnd.nextDouble();
-        // Flattened, so the burst stays inside its own row.
-        final p =
-            origin + Offset(math.cos(a) * d * 1.3, math.sin(a) * d * 0.6) * e;
-        final r = (5 + 5 * rnd.nextDouble()) * (1 - 0.6 * spT);
-        _sparkle(
-          canvas,
-          p,
-          r,
-          (k.isEven ? _gold : Colors.white).withValues(alpha: fade),
-        );
-      }
     }
   }
 
@@ -331,17 +338,24 @@ class _SheetPainter extends CustomPainter {
     }
   }
 
-  // A four-point star.
-  static void _sparkle(Canvas canvas, Offset c, double r, Color color) {
-    final w = r * 0.28;
-    final p = Path()
-      ..moveTo(c.dx, c.dy - r)
-      ..quadraticBezierTo(c.dx + w, c.dy - w, c.dx + r, c.dy)
-      ..quadraticBezierTo(c.dx + w, c.dy + w, c.dx, c.dy + r)
-      ..quadraticBezierTo(c.dx - w, c.dy + w, c.dx - r, c.dy)
-      ..quadraticBezierTo(c.dx - w, c.dy - w, c.dx, c.dy - r)
+  // A four-point star of radius 1, built once and scaled into place.
+  static final _star = () {
+    const w = 0.28;
+    return Path()
+      ..moveTo(0, -1)
+      ..quadraticBezierTo(w, -w, 1, 0)
+      ..quadraticBezierTo(w, w, 0, 1)
+      ..quadraticBezierTo(-w, w, -1, 0)
+      ..quadraticBezierTo(-w, -w, 0, -1)
       ..close();
-    canvas.drawPath(p, Paint()..color = color);
+  }();
+
+  static void _sparkle(Canvas canvas, Offset c, double r, Color color) {
+    canvas.save();
+    canvas.translate(c.dx, c.dy);
+    canvas.scale(r);
+    canvas.drawPath(_star, Paint()..color = color);
+    canvas.restore();
   }
 
   // Paints [tp] vertically centered on [at].dy, with an opacity.
