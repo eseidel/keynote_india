@@ -68,7 +68,7 @@ const _places = <_Place>[
     startMs: 370,
   ),
   (
-    center: Offset(400, 765),
+    center: Offset(345, 770),
     picture: Size(190, 413),
     roll: 0.1,
     yaw: 0.1,

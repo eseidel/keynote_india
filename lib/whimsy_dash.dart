@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
@@ -59,7 +60,7 @@ const _places = <_Place>[
     roll: 0.0,
     from: Offset(-0.45, -0.12),
     startMs: 0,
-    caption: Offset(0.16, 0.985),
+    caption: Offset(0.15, 0.985),
   ),
   // Phones: front and center, nearly square on so they read best.
   (
@@ -105,16 +106,51 @@ class _HopGalleryState extends State<HopGallery>
     duration: const Duration(milliseconds: _totalMs),
   )..forward();
 
+  /// Each card's soft shadow, blurred once into a small padded image (see
+  /// [_bakeShadow]); null until its picture has decoded.
+  final List<ui.Image?> _shadows = [null, null, null];
+  final List<(ImageStream, ImageStreamListener)> _streams = [];
+
   @override
   void initState() {
     super.initState();
-    // The layout (_places, _paintOrder) is for exactly three screens; an
-    // extra one would never mount and Dash would silently vanish.
+    // The layout (_places, _paintOrder) is for exactly three screens. No
+    // runtime guards: in release an extra item fails loudly (RangeError on
+    // _places) rather than quietly dropping a picture.
     assert(widget.items.length == 3, 'HopGallery lays out exactly 3 items');
+    // The car photo is an opaque rounded rect: no need to wait for it.
+    _shadows[2] = _bakeShadow(null, _places[2].aspect, radius: 18);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_streams.isNotEmpty) return;
+    // Desktop and phones are transparent around their backdrops, so their
+    // shadows are their own silhouettes.
+    for (final i in [0, 1]) {
+      final stream = AssetImage(widget.items[i].$1)
+          .resolve(createLocalImageConfiguration(context));
+      final listener = ImageStreamListener((info, _) {
+        if (!mounted || _shadows[i] != null) return;
+        setState(
+          () => _shadows[i] = _bakeShadow(info.image, _places[i].aspect),
+        );
+        info.dispose();
+      });
+      stream.addListener(listener);
+      _streams.add((stream, listener));
+    }
   }
 
   @override
   void dispose() {
+    for (final (stream, listener) in _streams) {
+      stream.removeListener(listener);
+    }
+    for (final image in _shadows) {
+      image?.dispose();
+    }
     _clock.dispose();
     super.dispose();
   }
@@ -139,10 +175,9 @@ class _HopGalleryState extends State<HopGallery>
                 clipBehavior: Clip.none,
                 fit: StackFit.expand,
                 children: [
-                  for (final i in _paintOrder)
-                    if (i < widget.items.length) _card(i, stage, ms),
+                  for (final i in _paintOrder) _card(i, stage, ms),
                   for (final (i, (_, caption, _)) in widget.items.indexed)
-                    if (i < _places.length) _caption(i, caption, stage, ms),
+                    _caption(i, caption, stage, ms),
                   IgnorePointer(
                     child: CustomPaint(
                       painter: _DashPainter(
@@ -208,21 +243,26 @@ class _HopGalleryState extends State<HopGallery>
       );
     }
 
-    // The shadow is the picture's own silhouette, decoded tiny (40px wide)
-    // and stretched, so bilinear filtering softens it for free: no blur
-    // layer to re-rasterize every frame. It falls further, spreads and
-    // fades while the card is still up in the air.
-    final shadow = Transform.translate(
-      offset: Offset(0, 16 + 70 * lift),
-      child: Transform.scale(
-        scale: 1.03 + 0.08 * lift,
-        child: Image.asset(
-          image,
-          fit: BoxFit.fill,
-          cacheWidth: 40,
-          filterQuality: FilterQuality.low,
-          color: const Color(0xFF000000).withValues(alpha: 0.6 - 0.25 * lift),
-          colorBlendMode: BlendMode.srcIn,
+    // The shadow: a pre-blurred image with transparent padding, so every
+    // edge is soft, just stretched over the card (no blur layer per frame).
+    // It falls further, spreads and fades while the card is in the air.
+    final bleed = _shadowPad * w / _shadowW;
+    final shadow = Positioned(
+      left: -bleed,
+      top: -bleed,
+      right: -bleed,
+      bottom: -bleed,
+      child: Transform.translate(
+        offset: Offset(0, 16 + 70 * lift),
+        child: Transform.scale(
+          scale: 1 + 0.08 * lift,
+          child: RawImage(
+            image: _shadows[i],
+            fit: BoxFit.fill,
+            filterQuality: FilterQuality.low,
+            color: Color.fromRGBO(0, 0, 0, 0.75 - 0.3 * lift),
+            colorBlendMode: BlendMode.dstIn,
+          ),
         ),
       ),
     );
@@ -239,6 +279,7 @@ class _HopGalleryState extends State<HopGallery>
           transform: transform,
           child: Stack(
             fit: StackFit.expand,
+            clipBehavior: Clip.none,
             children: [
               shadow,
               SizedBox.expand(key: _pictures[i], child: picture),
@@ -286,6 +327,47 @@ class _HopGalleryState extends State<HopGallery>
       ancestor: stack,
     );
   }
+}
+
+/// Shadow images are baked this wide (plus padding), then stretched.
+const _shadowW = 120.0;
+const _shadowPad = 12.0;
+
+/// One-time: a black silhouette of [src] (or a rounded rect when [src] is
+/// null) blurred into a small image with [_shadowPad] of transparent margin
+/// on every side, so the blur falls off to nothing at the image's edges.
+ui.Image _bakeShadow(ui.Image? src, double aspect, {double radius = 0}) {
+  const w = _shadowW;
+  final h = w / aspect;
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder);
+  canvas.saveLayer(
+    null,
+    Paint()..imageFilter = ui.ImageFilter.blur(sigmaX: 2.2, sigmaY: 2.2),
+  );
+  const black = Color(0xFF000000);
+  final dst = Rect.fromLTWH(_shadowPad, _shadowPad, w, h);
+  if (src == null) {
+    // radius is in card px; the card is ~700px wide, the bake 120.
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(dst, Radius.circular(radius * w / 700)),
+      Paint()..color = black,
+    );
+  } else {
+    canvas.drawImageRect(
+      src,
+      Rect.fromLTWH(0, 0, src.width.toDouble(), src.height.toDouble()),
+      dst,
+      Paint()
+        ..filterQuality = FilterQuality.medium
+        ..colorFilter = const ColorFilter.mode(black, BlendMode.srcIn),
+    );
+  }
+  canvas.restore();
+  return recorder.endRecording().toImageSync(
+    (w + 2 * _shadowPad).ceil(),
+    (h + 2 * _shadowPad).ceil(),
+  );
 }
 
 class _DashPainter extends CustomPainter {
