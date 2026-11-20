@@ -239,16 +239,22 @@ class _PresenterState extends State<Presenter> {
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              AnimatedSwitcher(
-                                duration: shatter != null
-                                    ? Duration.zero
-                                    : const Duration(milliseconds: 250),
-                                child: BuildStep(
-                                  key: ValueKey((index, replay)),
-                                  step: step,
-                                  child: SlideFrame(
-                                    slide: slide,
-                                    number: index + 1,
+                              // Clip the slide to its canvas: whimsy that
+                              // bleeds off an edge must not show in the black
+                              // bars on a screen that isn't 16:9. The shatter
+                              // below stays unclipped so its glass flies free.
+                              ClipRect(
+                                child: AnimatedSwitcher(
+                                  duration: shatter != null
+                                      ? Duration.zero
+                                      : const Duration(milliseconds: 250),
+                                  child: BuildStep(
+                                    key: ValueKey((index, replay)),
+                                    step: step,
+                                    child: SlideFrame(
+                                      slide: slide,
+                                      number: index + 1,
+                                    ),
                                   ),
                                 ),
                               ),
