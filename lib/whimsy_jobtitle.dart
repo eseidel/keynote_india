@@ -43,30 +43,33 @@ class _JobTitleStatementState extends State<JobTitleStatement>
   }
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          widget.text,
-          textAlign: TextAlign.center,
-          style: headline(widget.size),
-        ),
-        const SizedBox(height: 64),
-        Text(
-          'JOB TITLE',
-          style: zalando(
-            12,
-            weight: 600,
-            color: Palette.muted,
-          ).copyWith(letterSpacing: 6),
-        ),
-        const SizedBox(height: 16),
-        CustomPaint(
-          size: const Size(_boardW, _cellH),
-          painter: _BoardPainter(_clock, _flaps),
-        ),
-      ],
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 160),
+    child: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            widget.text,
+            textAlign: TextAlign.center,
+            style: headline(widget.size),
+          ),
+          const SizedBox(height: 64),
+          Text(
+            'JOB TITLE',
+            style: zalando(
+              12,
+              weight: 600,
+              color: Palette.muted,
+            ).copyWith(letterSpacing: 6),
+          ),
+          const SizedBox(height: 16),
+          CustomPaint(
+            size: const Size(_boardW, _cellH),
+            painter: _BoardPainter(_clock, _flaps),
+          ),
+        ],
+      ),
     ),
   );
 }
@@ -85,7 +88,7 @@ class _Flaps {
   _Flaps() {
     final style = headline(27);
     final accent = headline(27, color: Palette.accent);
-    for (final ch in '$_alphabet?'.split('')) {
+    for (final ch in _alphabet.split('')) {
       glyphs[ch] = TextPainter(
         text: TextSpan(text: ch, style: style),
         textDirection: TextDirection.ltr,
@@ -100,11 +103,12 @@ class _Flaps {
     capHeight = m.ascent * 0.72;
 
     final r = math.Random(50);
-    // Blanks land from the outside in; the '?' cell flips longest.
+    // Blanks land in pairs from the outside in, a beat apart within each
+    // pair; the '?' cell lands last.
     const landOrder = [0, 8, 1, 7, 2, 6, 3, 5, 4];
     for (var i = 0; i < _cells; i++) {
       final rank = landOrder.indexOf(i);
-      final flips = i == _askCell ? 18 : 12 + rank + r.nextInt(3);
+      final flips = i == _askCell ? 18 : 13 + r.nextInt(3);
       final chars = <String>[_start[i]];
       for (var j = 0; j < flips - 1; j++) {
         String c;
@@ -114,25 +118,33 @@ class _Flaps {
         chars.add(c);
       }
       chars.add(i == _askCell ? '?' : ' ');
+      // Quick clatter that slows down toward the end, like a real board
+      // running out of momentum, stretched so the cell lands on its beat.
+      final gaps = [
+        for (var j = 0; j < flips; j++)
+          62 +
+              150 * math.pow(j / flips, 3) +
+              (i == _askCell ? 90 * math.pow(j / flips, 2) : 0),
+      ];
+      final start = 520.0 + r.nextDouble() * 40;
+      final land = 1750.0 + (rank ~/ 2) * 230 + (rank.isOdd ? 70 : 0);
+      final raw =
+          gaps.take(flips - 1).fold(0.0, (a, b) => a + b) + gaps.last * 0.92;
+      final stretch = (land - start) / raw;
       final starts = <double>[];
       final durs = <double>[];
-      var at = 520.0 + i * 45 + r.nextDouble() * 30;
-      for (var j = 0; j < flips; j++) {
-        // Quick clatter that slows down toward the end, like a real board
-        // running out of momentum.
-        final f = j / flips;
-        final gap = 62 + 150 * f * f * f + (i == _askCell ? 90 * f * f : 0);
-        final dur = math.min(gap * 0.92, 150.0);
+      var at = start;
+      for (final g in gaps) {
         starts.add(at);
-        durs.add(dur);
-        at += gap;
+        durs.add(math.min(g * stretch * 0.92, 150.0));
+        at += g * stretch;
       }
       tracks.add(_Track(chars, starts, durs));
     }
   }
 
   // Letters plus a few symbols: the board hunts but never spells anything.
-  static const _alphabet = 'ABCDEFGHIJKLMNOPRSTUVWXYZ#&%*@';
+  static const _alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#&%*@';
 
   final glyphs = <String, TextPainter>{};
   late final TextPainter ask;
@@ -192,12 +204,12 @@ class _BoardPainter extends CustomPainter {
     final hinge = rect.center.dy;
     final topHalf = Rect.fromLTRB(rect.left, rect.top, rect.right, hinge);
     final botHalf = Rect.fromLTRB(rect.left, hinge, rect.right, rect.bottom);
-    final isAsk = i == _askCell && k == tr.chars.length - 1;
+    final landed = i == _askCell && k == tr.chars.length - 1 && p >= 1;
 
     // Behind the flap: new char on top, old char below until the flap
     // passes halfway.
-    _half(canvas, rect, topHalf, now, _top, isAsk);
-    _half(canvas, rect, botHalf, p < 0.5 ? before : now, _bottom, isAsk);
+    _half(canvas, rect, topHalf, now, _top);
+    _half(canvas, rect, botHalf, p < 0.5 ? before : now, _bottom);
 
     if (p < 1) {
       // The flap: the old top half folding down to edge-on, then the new
@@ -210,9 +222,9 @@ class _BoardPainter extends CustomPainter {
       canvas.scale(1, math.max(fold, 0.001));
       canvas.translate(0, -hinge);
       if (p < 0.5) {
-        _half(canvas, rect, topHalf, before, _top, false);
+        _half(canvas, rect, topHalf, before, _top);
       } else {
-        _half(canvas, rect, botHalf, now, _bottom, isAsk);
+        _half(canvas, rect, botHalf, now, _bottom);
       }
       // Shade it as it turns away from the light.
       canvas.drawRect(
@@ -231,30 +243,23 @@ class _BoardPainter extends CustomPainter {
     canvas.drawRect(Rect.fromLTWH(rect.left - 2, hinge - 5, 4, 10), pin);
     canvas.drawRect(Rect.fromLTWH(rect.right - 2, hinge - 5, 4, 10), pin);
 
-    // A soft glow under the '?' as it lands.
-    if (isAsk && ms >= f.endMs) {
-      final glow = ((ms - f.endMs) / 700).clamp(0.0, 1.0);
-      if (glow < 1) {
+    // A ring pulses out from the '?' cell as it lands, and fades.
+    if (landed) {
+      final ring = ((ms - f.endMs) / 700).clamp(0.0, 1.0);
+      if (ring < 1) {
         canvas.drawRRect(
-          RRect.fromRectAndRadius(rect.inflate(4 + 6 * glow), _radius),
+          RRect.fromRectAndRadius(rect.inflate(4 + 6 * ring), _radius),
           Paint()
             ..style = PaintingStyle.stroke
             ..strokeWidth = 3
-            ..color = Palette.accent.withValues(alpha: 0.6 * (1 - glow)),
+            ..color = Palette.accent.withValues(alpha: 0.6 * (1 - ring)),
         );
       }
     }
   }
 
   /// One half of a cell: its card and the part of [ch] that falls in it.
-  void _half(
-    Canvas canvas,
-    Rect cell,
-    Rect half,
-    String ch,
-    Color color,
-    bool isAsk,
-  ) {
+  void _half(Canvas canvas, Rect cell, Rect half, String ch, Color color) {
     final top = half.top == cell.top;
     canvas.drawRRect(
       RRect.fromRectAndCorners(
@@ -267,7 +272,7 @@ class _BoardPainter extends CustomPainter {
       Paint()..color = color,
     );
     if (ch == ' ') return;
-    final g = isAsk ? f.ask : f.glyphs[ch]!;
+    final g = ch == '?' ? f.ask : f.glyphs[ch]!;
     canvas.save();
     canvas.clipRect(half);
     // Caps centered on the hinge.
