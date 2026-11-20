@@ -33,6 +33,7 @@ import 'whimsy_sixty.dart';
 import 'whimsy_skills.dart';
 import 'whimsy_software.dart';
 import 'whimsy_squishy.dart';
+import 'whimsy_ticks.dart';
 import 'whimsy_today.dart';
 import 'whimsy_tokens.dart';
 import 'whimsy_truth.dart';
@@ -265,7 +266,7 @@ final List<Slide> deck = [
     notes: 'Our sales team follows our codebase through agents. Code is how the company coordinates now.',
   ),
   const Slide(
-    ListSlide(
+    TickedList(
       title: 'Why portable matters more',
       items: [
         '1. Ownership is the cost.',
