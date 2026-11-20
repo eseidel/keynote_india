@@ -29,6 +29,7 @@ import 'whimsy_scale.dart';
 import 'whimsy_sixty.dart';
 import 'whimsy_software.dart';
 import 'whimsy_squishy.dart';
+import 'whimsy_today.dart';
 import 'whimsy_tokens.dart';
 import 'whimsy_truth.dart';
 import 'whimsy_verify.dart';
@@ -102,7 +103,7 @@ final List<Slide> deck = [
     notes: 'Browsers, then started Flutter, then Shorebird. Decades on making portable the default. Shorebird: one line, booth later.',
   ),
   const Slide(
-    ListSlide(title: 'Today', items: ['AI', 'Flutter', 'Us'], size: 40),
+    TodayRoute(title: 'Today', items: ['AI', 'Flutter', 'Us'], size: 40),
     cover: true,
     notes: "Today you'll hear about building at scale and AI writing your code. This talk is why it all matters.",
   ),
