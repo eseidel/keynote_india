@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/widgets.dart';
 
@@ -118,23 +119,6 @@ class _Crowd {
       }
       rows.add(people);
     }
-    // Two people in the front rows who aren't sure yet.
-    for (final (k, i) in [(2, 4), (3, 8)]) {
-      final p = rows[k][i];
-      rows[k][i] = _Person(
-        x: p.x,
-        r: p.r,
-        hy: p.hy,
-        skin: p.skin,
-        shirt: p.shirt,
-        hair: p.hair,
-        side: p.side,
-        up: 0.8,
-        lean: p.lean,
-        phase: p.phase,
-        hesitant: true,
-      );
-    }
     // The robot takes a seat in the third row, right of center.
     final row = rows[2];
     var best = 0;
@@ -166,6 +150,28 @@ class _Crowd {
         hesitant: p.hesitant,
       );
     }
+    // Two people in the front rows who aren't sure yet, both clear of the
+    // robot (this runs after the clearance pass, so it can't be undone).
+    for (final (k, i) in [(2, 4), (3, 10)]) {
+      final p = rows[k][i];
+      rows[k][i] = _Person(
+        x: p.x,
+        r: p.r,
+        hy: p.hy,
+        skin: p.skin,
+        shirt: p.shirt,
+        hair: p.hair,
+        side: p.side,
+        up: 0.8,
+        lean: p.lean,
+        phase: p.phase,
+        hesitant: true,
+      );
+    }
+    assert(
+      rows[3][10].x - robot.x > 300,
+      'the front-row hesitant hand must stay clear of the robot',
+    );
   }
 
   static const _robotX = 1290.0;
@@ -220,17 +226,23 @@ double _raise(_Person p, double t) {
 double _upAt(_Person p) => p.hesitant ? 2.5 : p.up! + 0.45;
 
 /// A gentle wave that dies out exactly at the end of the clock.
-double _wave(_Person p, double t, double amp, double hz) {
-  final s = t - _upAt(p) + 0.3;
+double _wave(double upAt, double phase, double t, double amp, double hz) {
+  final s = t - upAt + 0.3;
   if (s <= 0) return 0;
-  final env = math.pow(_clamp01(1 - s / (_total - _upAt(p) + 0.3)), 2);
-  return amp * math.sin(2 * math.pi * hz * s + p.phase) * env;
+  final env = math.pow(_clamp01(1 - s / (_total - upAt + 0.3)), 2);
+  return amp * math.sin(2 * math.pi * hz * s + phase) * env;
 }
 
 class _CrowdPainter extends CustomPainter {
   _CrowdPainter(this.clock, this.crowd) : super(repaint: clock);
   final Animation<double> clock;
   final _Crowd crowd;
+
+  // Reused for every person, every frame; only the color changes.
+  final _fill = Paint();
+  final _stroke = Paint()
+    ..strokeCap = StrokeCap.round
+    ..style = PaintingStyle.stroke;
 
   /// A raised open hand in units of the head radius: wrist at the origin,
   /// fingers up (-y), thumb out to +x.
@@ -332,12 +344,11 @@ class _CrowdPainter extends CustomPainter {
         beam,
         Paint()
           ..blendMode = BlendMode.plus
-          ..shader = LinearGradient(
-            colors: [
-              color.withValues(alpha: 0.22 * on * rest),
-              color.withValues(alpha: 0),
-            ],
-          ).createShader(Rect.fromPoints(origin, at(a))),
+          // Bright at the light, fading down the beam.
+          ..shader = ui.Gradient.linear(origin, at(a), [
+            color.withValues(alpha: 0.22 * on * rest),
+            color.withValues(alpha: 0),
+          ]),
       );
     }
   }
@@ -361,9 +372,7 @@ class _CrowdPainter extends CustomPainter {
     final elbow =
         Offset.lerp(shoulder, hand, 0.5)! +
         Offset(side * 0.55 * r * math.sin(math.pi * _clamp01(u)), 0);
-    final arm = Paint()
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
+    final arm = _stroke;
     canvas
       ..drawLine(
         shoulder,
@@ -385,7 +394,7 @@ class _CrowdPainter extends CustomPainter {
       ..translate(hand.dx, hand.dy)
       ..rotate(math.atan2(d.dy, d.dx) + math.pi / 2 + wave)
       ..scale(-side * r, r)
-      ..drawPath(_hand, Paint()..color = skin)
+      ..drawPath(_hand, _fill..color = skin)
       ..restore();
   }
 
@@ -400,7 +409,7 @@ class _CrowdPainter extends CustomPainter {
       r,
       u,
       p.lean,
-      p.up == null ? 0 : _wave(p, t, 0.22, 1.4),
+      p.up == null ? 0 : _wave(_upAt(p), p.phase, t, 0.22, 1.4),
       p.shirt,
       p.skin,
     );
@@ -413,7 +422,7 @@ class _CrowdPainter extends CustomPainter {
         topLeft: Radius.circular(1.2 * r),
         topRight: Radius.circular(1.2 * r),
       ),
-      Paint()..color = p.shirt,
+      _fill..color = p.shirt,
     );
     final head = Rect.fromCenter(
       center: Offset(p.x, p.hy),
@@ -421,15 +430,14 @@ class _CrowdPainter extends CustomPainter {
       height: 2.1 * r,
     );
     canvas
-      ..drawOval(head, Paint()..color = p.hair)
+      ..drawOval(head, _fill..color = p.hair)
       // Rim light from the stage, along the top of the head.
       ..drawArc(
         head.deflate(0.04 * r),
         math.pi * 1.15,
         math.pi * 0.7,
         false,
-        Paint()
-          ..style = PaintingStyle.stroke
+        _stroke
           ..strokeWidth = 0.09 * r
           ..color = Palette.soft.withValues(alpha: 0.22),
       );
@@ -443,18 +451,6 @@ class _CrowdPainter extends CustomPainter {
     final x = seat.x, hy = seat.hy;
     // Up first, both arms, and it waves the hardest.
     final u = Curves.easeOutBack.transform(_clamp01((t - 0.3) / 0.4));
-    final robotSeat = _Person(
-      x: x,
-      r: r,
-      hy: hy,
-      skin: _metal,
-      shirt: _metalDark,
-      hair: _metal,
-      side: 1,
-      up: 0.3,
-      lean: 0,
-      phase: 0,
-    );
     for (final side in [-1.0, 1.0]) {
       _paintArm(
         canvas,
@@ -463,7 +459,7 @@ class _CrowdPainter extends CustomPainter {
         r,
         u,
         0.2 * r,
-        _wave(robotSeat, t, 0.35, 2.2) * side,
+        _wave(0.75, 0, t, 0.35, 2.2) * side,
         _metalDark,
         _metal,
       );
