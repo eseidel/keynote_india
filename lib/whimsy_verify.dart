@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show PathMetric;
 
 import 'package:flutter/material.dart';
 
@@ -92,7 +93,8 @@ class _Stage extends StatelessWidget {
       alignment: Alignment.center,
       children: [
         if (twoAlpha > 0)
-          for (final (i, label) in ['iOS', 'Android'].indexed)
+          // Labels in caps, except iOS keeps its own case.
+          for (final (i, label) in ['iOS', 'ANDROID'].indexed)
             Transform.translate(
               offset: Offset(i == 0 ? -dx : dx, 0),
               child: Opacity(
@@ -112,7 +114,7 @@ class _Stage extends StatelessWidget {
             child: Opacity(
               opacity: Curves.easeOut.transform(check),
               child: Text(
-                'IOS + ANDROID',
+                'iOS + ANDROID',
                 style: zalando(
                   14,
                   weight: 700,
@@ -214,7 +216,7 @@ class _Card extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        label.toUpperCase(),
+                        label,
                         style: zalando(
                           14,
                           weight: 700,
@@ -331,15 +333,23 @@ class _BigCheck extends CustomPainter {
   _BigCheck(this.t);
   final double t;
 
+  static Size? _size;
+  static PathMetric? _metric;
+
   @override
   void paint(Canvas canvas, Size size) {
     final s = size.shortestSide;
-    final c = size.center(Offset.zero);
-    final path = Path()
-      ..moveTo(c.dx - s * 0.24, c.dy + s * 0.01)
-      ..lineTo(c.dx - s * 0.06, c.dy + s * 0.19)
-      ..lineTo(c.dx + s * 0.26, c.dy - s * 0.17);
-    final metric = path.computeMetrics().first;
+    // The check's shape only depends on the size; measure it once.
+    if (size != _size) {
+      final c = size.center(Offset.zero);
+      final path = Path()
+        ..moveTo(c.dx - s * 0.24, c.dy + s * 0.01)
+        ..lineTo(c.dx - s * 0.06, c.dy + s * 0.19)
+        ..lineTo(c.dx + s * 0.26, c.dy - s * 0.17);
+      _size = size;
+      _metric = path.computeMetrics().first;
+    }
+    final metric = _metric!;
     canvas.drawPath(
       metric.extractPath(0, metric.length * t),
       Paint()
