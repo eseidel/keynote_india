@@ -9,6 +9,7 @@ import 'whimsy_best.dart';
 import 'whimsy_bird.dart';
 import 'whimsy_builtown.dart';
 import 'whimsy_callback.dart';
+import 'whimsy_ceoshot.dart';
 import 'whimsy_cambrian.dart';
 import 'whimsy_compounds.dart';
 import 'whimsy_dash.dart';
@@ -467,11 +468,7 @@ final List<Slide> deck = [
     notes: "We don't know yet. So many explorations, everyone experimenting. Here's mine.",
   ),
   Slide(
-    TitleOver(
-      title: 'This is how I work',
-      size: 32,
-      child: Picture(img('ceo_shot.png')),
-    ),
+    CeoShotSlide(title: 'This is how I work', image: img('ceo_shot.png')),
     section: Section.us,
     notes: 'Screenshot. I live in it all day; I just talk to it. ~300K lines, never read the code. This is what makes half a million lines a month possible.',
   ),
