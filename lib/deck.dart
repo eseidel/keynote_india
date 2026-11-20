@@ -27,6 +27,7 @@ import 'whimsy_squishy.dart';
 import 'whimsy_tokens.dart';
 import 'whimsy_truth.dart';
 import 'whimsy_weird.dart';
+import 'whimsy_whichstack.dart';
 
 enum Section { ai, flutter, us }
 
@@ -325,7 +326,7 @@ final List<Slide> deck = [
     notes: 'Test and verify everything anywhere, even iOS from Linux. The cost: you carry the whole stack, so the stack had better be good, and you mimic each platform’s widgets yourself.',
   ),
   const Slide(
-    Statement('So which stack?'),
+    WhichStack('So which stack?'),
     section: Section.flutter,
     notes: 'Transition into Flutter. If you carry a stack, carry the best one.',
   ),
