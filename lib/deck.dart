@@ -6,6 +6,7 @@ import 'whimsy_amazing.dart';
 import 'whimsy_approaches.dart';
 import 'whimsy_barriers.dart';
 import 'whimsy_bird.dart';
+import 'whimsy_builtown.dart';
 import 'whimsy_cambrian.dart';
 import 'whimsy_compounds.dart';
 import 'whimsy_dash.dart';
@@ -464,7 +465,7 @@ final List<Slide> deck = [
     notes: 'Screenshot. I live in it all day; I just talk to it. ~300K lines, never read the code. This is what makes half a million lines a month possible.',
   ),
   const Slide(
-    Statement('Everyone at Shorebird built their own'),
+    BuiltOwnSlide('Everyone at Shorebird built their own'),
     section: Section.us,
     notes: 'Ops, PM, sales. Almost all Flutter and Dart, no mandate.',
   ),
