@@ -9,6 +9,7 @@ import 'whimsy_glitch.dart';
 import 'whimsy_pixels.dart';
 import 'whimsy_tokens.dart';
 import 'whimsy_truth.dart';
+import 'whimsy_working.dart';
 
 enum Section { ai, flutter, us }
 
@@ -396,7 +397,7 @@ final List<Slide> deck = [
     notes: 'Still designed around humans. It has to be designed soup to nuts around agents, or somebody else will. E.g. faster analyzer, system explained to agents, iOS from Linux productized.',
   ),
   const Slide(
-    Statement('We’re working on it'),
+    WorkingStatement('We’re working on it'),
     section: Section.flutter,
     notes: "That's why Shorebird exists.",
   ),
