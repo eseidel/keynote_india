@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'layouts.dart';
 import 'materialize.dart';
+import 'whimsy_bird.dart';
 
 enum Section { ai, flutter, us }
 
@@ -478,7 +479,11 @@ final List<Slide> deck = [
     notes: "Enjoy this human conference. Learning is part of what you'll do today.",
   ),
   Slide(
-    Cover(title: 'Thank you', logo: img('g3b572bde633_0_186.png')),
+    Cover(
+      title: 'Thank you',
+      logo: img('g3b572bde633_0_186.png'),
+      logoOverlay: const LandingBird(),
+    ),
     cover: true,
     notes: 'Find me after, or at the Shorebird booth. Shorebird OTA talk at 17:35.',
   ),

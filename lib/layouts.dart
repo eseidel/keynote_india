@@ -88,10 +88,20 @@ class Statement extends StatelessWidget {
 
 /// Opening and closing cover: title plus a byline card.
 class Cover extends StatelessWidget {
-  const Cover({super.key, required this.title, this.byline, this.logo});
+  const Cover({
+    super.key,
+    required this.title,
+    this.byline,
+    this.logo,
+    this.logoOverlay,
+  });
   final String title;
   final List<String>? byline;
   final String? logo;
+
+  /// Painted over the logo, unclipped, in the logo's coordinates (the
+  /// Thank you slide's bird flies in and lands on it).
+  final Widget? logoOverlay;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -101,7 +111,13 @@ class Cover extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (logo != null) ...[
-          Image.asset(logo!, height: 82),
+          if (logoOverlay == null)
+            Image.asset(logo!, height: 82)
+          else
+            Stack(
+              clipBehavior: Clip.none,
+              children: [Image.asset(logo!, height: 82), logoOverlay!],
+            ),
           const SizedBox(height: 24),
         ],
         Text(title, style: headline(logo == null ? 40 : 80)),
