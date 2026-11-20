@@ -19,6 +19,7 @@ import 'whimsy_glitch.dart';
 import 'whimsy_halfmillion.dart';
 import 'whimsy_important.dart';
 import 'whimsy_intent.dart';
+import 'whimsy_jobtitle.dart';
 import 'whimsy_learners.dart';
 import 'whimsy_learning.dart';
 import 'whimsy_nohands.dart';
@@ -442,7 +443,7 @@ final List<Slide> deck = [
     notes: "It's a wild time; we're living in the future. This is a human conference, not an agent conference. It's always about the humans: customers and developers.",
   ),
   const Slide(
-    Statement('The engineer’s job changed'),
+    JobTitleStatement('The engineer’s job changed'),
     section: Section.us,
     notes: "First thing in this section. Not the same as three months ago, or a year ago. We don't even have the words yet.",
   ),
