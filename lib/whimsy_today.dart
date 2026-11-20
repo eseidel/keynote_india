@@ -35,13 +35,28 @@ class _TodayRouteState extends State<TodayRoute>
     duration: const Duration(milliseconds: 3400),
   )..forward();
 
-  late final List<double> _widths = [
-    for (final item in widget.items)
-      (TextPainter(
-        text: TextSpan(text: item, style: headline(widget.size)),
-        textDirection: TextDirection.ltr,
-      )..layout()).width,
-  ];
+  /// Each word's width as the Text will lay it out (same style and text
+  /// scale), so each stop sits just left of its word.
+  var _widths = const <double>[];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final scaler = MediaQuery.textScalerOf(context);
+    _widths = [for (final item in widget.items) _measure(item, scaler)];
+  }
+
+  double _measure(String item, TextScaler scaler) {
+    final tp = TextPainter(
+      text: TextSpan(text: item, style: headline(widget.size)),
+      textDirection: TextDirection.ltr,
+      textScaler: scaler,
+    )..layout();
+    final w = tp.width;
+    tp.dispose();
+    return w;
+  }
+
   final _geometry = _RouteCache();
 
   @override
@@ -96,18 +111,27 @@ class _TodayRouteState extends State<TodayRoute>
   }
 }
 
-/// When the train pulls into each stop, in seconds.
-const _arrive = [0.95, 1.8, 2.65];
+/// The timetable, in seconds: the train leaves the start at [_leave], takes
+/// [_runs] to reach each stop, and waits [_dwell] at each one.
+const _leave = 0.5, _dwell = 0.3, _runs = [0.45, 0.55, 0.55];
 
-/// The train's schedule: (seconds, stop it is at or leaving). It leaves the
-/// start at 0.5s and waits 0.3s at each stop.
-const _schedule = [
-  (0.5, -1),
-  (0.95, 0),
-  (1.25, 0),
-  (1.8, 1),
-  (2.1, 1),
-  (2.65, 2),
+/// When the train pulls into each stop.
+final _arrive = [
+  for (var i = 0, at = _leave; i < _runs.length; i++)
+    at += _runs[i] + (i > 0 ? _dwell : 0),
+];
+
+/// When the train leaves stop [i].
+double _departs(int i) => _arrive[i] + _dwell;
+
+/// The train's schedule: (seconds, stop it is at or leaving; -1 is the
+/// start), derived from the timetable.
+final _schedule = [
+  (_leave, -1),
+  for (var i = 0; i < _arrive.length; i++) ...[
+    (_arrive[i], i),
+    if (i < _arrive.length - 1) (_departs(i), i),
+  ],
 ];
 
 /// A quick swell and return over 0.4s, for a stop that was just reached.
@@ -120,7 +144,7 @@ class _RouteCache {
   late Path path;
   late PathMetric metric;
   late List<Offset> stops;
-  late List<double> stopAt; // distance along the path, -1 is the start
+  late List<double> stopAt; // each stop's distance along the path
   late Offset start;
 
   void ensure(Size s, List<double> widths) {
@@ -256,7 +280,7 @@ class _RoutePainter extends CustomPainter {
     for (final (i, c) in cache.stops.indexed) {
       final since = t - _arrive[i];
       final reached = since >= 0;
-      final leaves = i < last ? _schedule[2 * i + 2].$1 : double.infinity;
+      final leaves = i < last ? _departs(i) : double.infinity;
       final current = reached && t < leaves;
       final pop = reached
           ? Curves.easeOutBack.transform((since / 0.3).clamp(0, 1))
