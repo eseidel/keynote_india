@@ -26,6 +26,7 @@ import 'whimsy_notreplace.dart';
 import 'whimsy_pixels.dart';
 import 'whimsy_ribbon.dart';
 import 'whimsy_prompt.dart';
+import 'whimsy_promptnative.dart';
 import 'whimsy_scale.dart';
 import 'whimsy_sixty.dart';
 import 'whimsy_software.dart';
@@ -180,7 +181,7 @@ final List<Slide> deck = [
     section: Section.flutter,
   ),
   const Slide(
-    Statement('“Just prompt native”'),
+    PromptNative('“Just prompt native”'),
     section: Section.flutter,
     notes: 'Shopify went native. But most of these stories end up on portable anyway, often one portable stack to another (Discord). I think portable matters more now, for three reasons. Straight into the first.',
   ),
