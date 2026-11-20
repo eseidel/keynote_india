@@ -49,6 +49,11 @@ class _ImportantState extends State<ImportantStatement>
 
   static const _swell = ElasticOutCurve(0.55);
 
+  /// Sizes and weights move in steps: every new (size, weight) is a fresh
+  /// set of glyphs for Impeller's atlas, and a smooth ramp makes hundreds,
+  /// which overflows it and drops the text for a frame.
+  static double _step(double v, double by) => (v / by).roundToDouble() * by;
+
   /// The span at time [ms]; [ms] past the end gives the settled line.
   TextSpan _span(double ms) {
     // More: springs up from 0.5s; less: deflates from 0.7s.
@@ -60,8 +65,8 @@ class _ImportantState extends State<ImportantStatement>
         (1 - Curves.easeInOut.transform(_ramp(ms, 1100, 2700)));
     final moreStyle =
         zalando(
-          lerpDouble(_size, 69, more)!,
-          weight: lerpDouble(700, 900, more)!.clamp(100, 1000),
+          _step(lerpDouble(_size, 69, more)!, 0.5),
+          weight: _step(lerpDouble(700, 900, more)!.clamp(100, 1000), 50),
           color: Color.lerp(
             Palette.text,
             Palette.accent,
@@ -77,8 +82,8 @@ class _ImportantState extends State<ImportantStatement>
           ],
         );
     final lessStyle = zalando(
-      lerpDouble(_size, 50, less)!,
-      weight: lerpDouble(700, 300, less)!,
+      _step(lerpDouble(_size, 50, less)!, 0.5),
+      weight: _step(lerpDouble(700, 300, less)!, 50),
       color: Color.lerp(Palette.text, Palette.muted, less)!,
     );
     return TextSpan(

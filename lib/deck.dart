@@ -19,6 +19,7 @@ import 'whimsy_glitch.dart';
 import 'whimsy_halfmillion.dart';
 import 'whimsy_important.dart';
 import 'whimsy_intent.dart';
+import 'whimsy_learners.dart';
 import 'whimsy_learning.dart';
 import 'whimsy_nohands.dart';
 import 'whimsy_notreplace.dart';
@@ -480,8 +481,8 @@ final List<Slide> deck = [
     notes: 'Ops, PM, sales. Almost all Flutter and Dart, no mandate.',
   ),
   const Slide(
-    Quote(
-      text: 'In times of change, learners inherit the earth, while the learned find themselves beautifully equipped to deal with a world that no longer exists.',
+    LearnersQuote(
+      text: 'In times of change, [learners inherit the earth], while {the learned} find themselves beautifully equipped to deal with <a world that no longer exists>.',
       by: 'Eric Hoffer',
     ),
     section: Section.us,
