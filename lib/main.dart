@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import 'deck.dart';
 import 'layouts.dart';
 import 'materialize.dart' show preloadHelmet;
+import 'preload.dart';
 import 'shatter.dart';
 import 'snap_web.dart' if (dart.library.io) 'snap_io.dart';
 import 'theme.dart';
@@ -27,7 +28,8 @@ class KeynoteApp extends StatelessWidget {
     title: 'Why AI Makes Flutter More Important, Not Less', // the browser tab
     debugShowCheckedModeBanner: false,
     theme: ThemeData.dark(),
-    home: const Presenter(),
+    // The web fetches each asset on first use: load them all up front.
+    home: kIsWeb ? const Preloader(child: Presenter()) : const Presenter(),
   );
 }
 

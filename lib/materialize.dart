@@ -357,3 +357,6 @@ class _MaterializeHelmetState extends State<MaterializeHelmet> {
   ),
   edges: source.extractEdges(),
 );
+
+/// Completes when the helmet is loaded (or failed to load).
+Future<void> helmetReady() => _Helmet.instance.ready.catchError((_) {});
