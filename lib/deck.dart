@@ -20,6 +20,7 @@ import 'whimsy_drivers.dart';
 import 'whimsy_future.dart';
 import 'whimsy_glitch.dart';
 import 'whimsy_halfmillion.dart';
+import 'whimsy_hands.dart';
 import 'whimsy_important.dart';
 import 'whimsy_intent.dart';
 import 'whimsy_jobsame.dart';
@@ -93,11 +94,7 @@ final List<Slide> deck = [
     notes: "The question going around online. It's wrong, and here's why.",
   ),
   Slide(
-    TitleOver(
-      title: 'But first …',
-      size: 40,
-      child: Picture(img('g3f3355e65d4_0_0.png')),
-    ),
+    const ShowOfHands(title: 'But first …', size: 40),
     notes: "Agents writing your code? Haven't typed code in a week? Compare to six months ago. Read the room; lean in or ease off.",
   ),
   Slide(
