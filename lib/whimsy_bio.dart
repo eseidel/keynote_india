@@ -36,13 +36,13 @@ class BioTimeline extends StatefulWidget {
 const _totalMs = 4000;
 const _total = _totalMs / 1000;
 
-// The slide's geometry, on the 1920x1080 canvas (Bio's padding).
+// The slide's geometry, on the 1920x1080 canvas.
 const _pad = EdgeInsets.fromLTRB(150, 180, 150, 140);
 const _photo = 650.0; // the picture inside the Polaroid
 const _border = 22.0, _chin = 78.0; // Polaroid paper
 const _printW = _photo + 2 * _border, _printH = _photo + _border + _chin;
 const _rest = 0.045; // radians: the print's tilt once it settles
-const _lineGap = 6.0; // Bio's vertical padding around each line
+const _lineGap = 6.0; // vertical padding around each line
 
 /// When each hop lands (seconds); the line beside it slides in then.
 const _hops = [0.7, 1.15, 1.55, 1.95, 2.35];
@@ -59,6 +59,20 @@ class _BioTimelineState extends State<BioTimeline>
   )..forward();
 
   double get _t => _clock.value * _total;
+
+  @override
+  void initState() {
+    super.initState();
+    // One hop per line, and every line in the order exactly once.
+    assert(
+      widget.lines.length == _hops.length &&
+          listEquals(
+            widget.order.toList()..sort(),
+            List.generate(_hops.length, (i) => i),
+          ),
+      'BioTimeline: order must list each of the ${_hops.length} lines once',
+    );
+  }
 
   @override
   void dispose() {
@@ -84,7 +98,7 @@ class _BioTimelineState extends State<BioTimeline>
     }
 
     // Where the lines are, so the bird can stand beside them: the column is
-    // centered in the padded area, as in Bio.
+    // centered in the padded area.
     final nameH = heightOf(nameStyle),
         lineH = heightOf(lineStyle) + 2 * _lineGap;
     final n = widget.lines.length;
@@ -137,18 +151,24 @@ class _BioTimelineState extends State<BioTimeline>
                   ],
                 ),
               ),
-              AnimatedBuilder(
-                animation: _clock,
-                builder: (_, _) => _Polaroid(widget.photo, _t),
+              // Its own layer: the photo and its shadow don't repaint
+              // with the bird or the lines.
+              RepaintBoundary(
+                child: AnimatedBuilder(
+                  animation: _clock,
+                  builder: (_, _) => _Polaroid(widget.photo, _t),
+                ),
               ),
             ],
           ),
         ),
         IgnorePointer(
-          child: CustomPaint(
-            painter: _BirdPainter(_clock, [
-              for (final i in widget.order) lineMid[i],
-            ]),
+          child: RepaintBoundary(
+            child: CustomPaint(
+              painter: _BirdPainter(_clock, [
+                for (final i in widget.order) lineMid[i],
+              ]),
+            ),
           ),
         ),
       ],
@@ -156,7 +176,7 @@ class _BioTimelineState extends State<BioTimeline>
   }
 }
 
-/// The print: drops in from above with a shadow that tightens as it lands,
+/// The print: drops in from above, its shadow closing in as it lands,
 /// wobbles to its resting tilt, and develops.
 class _Polaroid extends StatelessWidget {
   const _Polaroid(this.photo, this.t);
@@ -206,11 +226,19 @@ class _Polaroid extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFF4F1EB),
             borderRadius: BorderRadius.circular(6),
+            // A dark shadow alone barely reads on the dark slide, so a soft
+            // pale glow lifts the print too. Fixed blurs; only the shadow's
+            // offset follows the drop.
             boxShadow: [
               BoxShadow(
-                color: const Color(0x8C000000),
-                blurRadius: 24 + 70 * p.lift,
-                offset: Offset(10 + 30 * p.lift, 16 + 60 * p.lift),
+                color: const Color(0x33FFFFFF),
+                blurRadius: 48,
+                spreadRadius: 2,
+              ),
+              BoxShadow(
+                color: const Color(0xCC000000),
+                blurRadius: 30,
+                offset: Offset(14 + 30 * p.lift, 24 + 60 * p.lift),
               ),
             ],
           ),

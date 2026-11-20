@@ -499,47 +499,6 @@ class Quote extends StatelessWidget {
   );
 }
 
-/// Bio slide: name, lines, headshot.
-class Bio extends StatelessWidget {
-  const Bio({
-    super.key,
-    required this.name,
-    required this.lines,
-    required this.photo,
-  });
-  final String name;
-  final List<String> lines;
-  final String photo;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(150, 180, 150, 140),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(name, style: headline(34)),
-              const SizedBox(height: 36),
-              for (final line in lines)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6),
-                  child: Text(line, style: zalando(16.5, color: Palette.soft)),
-                ),
-            ],
-          ),
-        ),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: Image.asset(photo, width: 740, height: 740, fit: BoxFit.cover),
-        ),
-      ],
-    ),
-  );
-}
-
 /// "Two codebases: 3x the bill": every copy must stay in sync with every
 /// other, so links grow as n(n-1)/2. When the slide appears, 2, 3 and 5
 /// copies get their links drawn one at a time, each with a running count

@@ -238,11 +238,14 @@ class _CrowdPainter extends CustomPainter {
   final Animation<double> clock;
   final _Crowd crowd;
 
-  // Reused for every person, every frame; only the color changes.
+  // Reused for every person, every frame. Every use sets the color, and
+  // every stroke use also sets the width; set both before drawing.
   final _fill = Paint();
   final _stroke = Paint()
     ..strokeCap = StrokeCap.round
     ..style = PaintingStyle.stroke;
+  // The rim light keeps the default butt ends.
+  final _rim = Paint()..style = PaintingStyle.stroke;
 
   /// A raised open hand in units of the head radius: wrist at the origin,
   /// fingers up (-y), thumb out to +x.
@@ -437,11 +440,15 @@ class _CrowdPainter extends CustomPainter {
         math.pi * 1.15,
         math.pi * 0.7,
         false,
-        _stroke
+        _rim
           ..strokeWidth = 0.09 * r
           ..color = Palette.soft.withValues(alpha: 0.22),
       );
   }
+
+  // The robot's hands start up at 0.3s and take 0.4s; its wave starts
+  // 0.45s after the start, as everyone else's does.
+  static const _robotUp = 0.3, _robotRise = 0.4;
 
   static const _metal = Color(0xFF8C9EB8); // Palette.muted
   static const _metalDark = Color(0xFF5A6B85);
@@ -450,7 +457,9 @@ class _CrowdPainter extends CustomPainter {
     final r = seat.r * 1.05;
     final x = seat.x, hy = seat.hy;
     // Up first, both arms, and it waves the hardest.
-    final u = Curves.easeOutBack.transform(_clamp01((t - 0.3) / 0.4));
+    final u = Curves.easeOutBack.transform(
+      _clamp01((t - _robotUp) / _robotRise),
+    );
     for (final side in [-1.0, 1.0]) {
       _paintArm(
         canvas,
@@ -459,7 +468,7 @@ class _CrowdPainter extends CustomPainter {
         r,
         u,
         0.2 * r,
-        _wave(0.75, 0, t, 0.35, 2.2) * side,
+        _wave(_robotUp + 0.45, 0, t, 0.35, 2.2) * side,
         _metalDark,
         _metal,
       );
