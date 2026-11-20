@@ -164,7 +164,7 @@ final List<Slide> deck = [
   ),
   Slide(
     SplitImage(
-      text: 'Code compounds',
+      text: 'Code\ncompounds',
       image: img('g3f42c810597_1_1.png'),
       size: 54,
     ),
@@ -255,9 +255,9 @@ final List<Slide> deck = [
   ),
   Slide(
     SplitImage(
-      text: 'The barriers between stacks are gone',
+      text: 'The barriers\nbetween stacks\nare gone',
       image: img('g3f42c810597_1_6.png'),
-      size: 40,
+      size: 60,
     ),
     section: Section.flutter,
     notes: "Easy to get into any stack now, so stacks are judged on end quality, agent fit and maintenance. The iOS lead who wouldn't leave Swift isn't the blocker anymore.",
@@ -471,9 +471,9 @@ final List<Slide> deck = [
   ),
   Slide(
     SplitImage(
-      text: 'Build for people, not platforms',
+      text: 'Build for people,\nnot platforms',
       image: img('g3f42c810597_1_12.png'),
-      size: 40,
+      size: 56,
     ),
     section: Section.us,
     notes: 'People, not platforms.',
