@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'layouts.dart';
-import 'voxel_island.dart';
+import 'materialize.dart';
 
 enum Section { ai, flutter, us }
 
@@ -284,15 +284,14 @@ final List<Slide> deck = [
     notes: "Because you own the pixels, Flutter goes wherever there's a screen: phones, web, desktop, smart home, cars (that's the 2026 Toyota RAV4's infotainment, shipping now; Lexus ES too), TVs. The same app on screens nobody planned for.",
   ),
   const Slide(
-    TitleOver(
+    FullBleed3D(
       title: 'You can do more',
-      child: ClipRRect(
-        borderRadius: BorderRadius.all(Radius.circular(16)),
-        child: VoxelIsland(),
-      ),
+      link: 'fscene.dev',
+      child: MaterializeHelmet(),
     ),
     section: Section.flutter,
-    notes: "This slide is Flutter: a live Flutter Scene (fscene.dev) world, rendered by Flutter GPU and Impeller inside the deck. Gorgeous 3D, made easy. Plus serious Windows desktop apps. You can do so much with Flutter that you can't with other systems.",
+    builds: 1, // click once to dissolve the helmet, again to advance
+    notes: "This slide is Flutter: Flutter Scene's Materialize demo (fscene.dev), running live inside the deck on Flutter GPU and Impeller. Wireframe, then glass shards, then the full PBR surface. Gorgeous 3D, made easy. Plus serious Windows desktop apps. You can do so much with Flutter that you can't with other systems.",
   ),
   Slide(
     SplitImage(

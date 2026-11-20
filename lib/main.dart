@@ -7,6 +7,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 import 'deck.dart';
+import 'layouts.dart';
 import 'theme.dart';
 
 void main() => runApp(const KeynoteApp());
@@ -50,7 +51,12 @@ class _PresenterState extends State<Presenter> {
     // and quits; used to check the live 3D slide without a human.
     const snap = String.fromEnvironment('SNAP');
     if (snap.isNotEmpty) {
-      Future.delayed(const Duration(seconds: 10), () async {
+      const melt = int.fromEnvironment('SNAP_STEP_MS');
+      if (melt > 0) {
+        Future.delayed(const Duration(milliseconds: melt), next);
+      }
+      const at = int.fromEnvironment('SNAP_MS', defaultValue: 10000);
+      Future.delayed(const Duration(milliseconds: at), () async {
         final ro =
             boundary.currentContext!.findRenderObject()!
                 as RenderRepaintBoundary;
@@ -129,10 +135,13 @@ class _PresenterState extends State<Presenter> {
                           size: canvasSize,
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 250),
-                            child: SlideFrame(
+                            child: BuildStep(
                               key: ValueKey(index),
-                              slide: slide,
-                              number: index + 1,
+                              step: step,
+                              child: SlideFrame(
+                                slide: slide,
+                                number: index + 1,
+                              ),
                             ),
                           ),
                         ),

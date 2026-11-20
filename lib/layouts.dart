@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'package:url_launcher/url_launcher.dart';
+
 import 'theme.dart';
 
 /// How many builds of the current slide are showing. Without one (e.g. in
@@ -517,4 +519,47 @@ class _GraphPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GraphPainter old) => old.n != n;
+}
+
+/// A live 3D scene filling the whole slide, title over the top and an
+/// optional link in the bottom-left corner.
+class FullBleed3D extends StatelessWidget {
+  const FullBleed3D({
+    super.key,
+    required this.title,
+    required this.child,
+    this.link,
+  });
+  final String title;
+  final Widget child;
+  final String? link;
+
+  @override
+  Widget build(BuildContext context) => Stack(
+    fit: StackFit.expand,
+    children: [
+      child,
+      Positioned(
+        top: 56,
+        left: 0,
+        right: 0,
+        child: Text(title, textAlign: TextAlign.center, style: headline(36)),
+      ),
+      if (link != null)
+        Positioned(
+          left: 100,
+          bottom: 34,
+          child: GestureDetector(
+            onTap: () => launchUrl(Uri.https(link!)),
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: Text(
+                link!,
+                style: zalando(14, weight: 600, color: Palette.accent),
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
 }
