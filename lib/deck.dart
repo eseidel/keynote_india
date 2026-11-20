@@ -296,10 +296,10 @@ final List<Slide> deck = [
       title: 'Bring your whole stack',
       examples: 'The web, Flutter, game engines',
       upside: 'Most portability and control; test anywhere',
-      downside: 'You carry the stack',
+      downside: 'You carry the stack, and mimic each platform’s look and feel',
     ),
     section: Section.flutter,
-    notes: 'Test and verify everything anywhere, even iOS from Linux. The cost: you carry the whole stack, so the stack had better be good.',
+    notes: 'Test and verify everything anywhere, even iOS from Linux. The cost: you carry the whole stack, so the stack had better be good, and you mimic each platform’s widgets yourself.',
   ),
   const Slide(
     Statement('So which stack?'),
@@ -323,7 +323,7 @@ final List<Slide> deck = [
         items: [
           (img('ev_desk.png'), 'Desktop', const Offset(0.5, 0.166)),
           (img('ev_mob.png'), 'iOS and Android', const Offset(0.716, 0.024)),
-          (img('ev_car.jpg'), 'Cars', const Offset(0.3, 0)),
+          (img('ev_car.jpg'), 'Embedded', const Offset(0.3, 0)),
         ],
       ),
     ),
@@ -500,7 +500,7 @@ final List<Slide> deck = [
     Cover(
       title: 'Thank you',
       logo: img('g3b572bde633_0_186.png'),
-      logoOverlay: const LandingBird(),
+      logoOverlay: (perch) => LandingBird(perch: perch),
       contact: 'eric@shorebird.dev',
     ),
     cover: true,

@@ -107,9 +107,37 @@ class Cover extends StatelessWidget {
   final List<String>? byline;
   final String? logo;
 
-  /// Painted over the logo, unclipped, in the logo's coordinates (the
-  /// Thank you slide's bird flies in and lands on it).
-  final Widget? logoOverlay;
+  /// Builds a widget over the title, unclipped, in the title's coordinates,
+  /// given the top center of the title's last letter (the Thank you slide's
+  /// bird lands there).
+  final Widget Function(Offset perch)? logoOverlay;
+
+  /// The title, with [logoOverlay] placed relative to its last letter.
+  Widget _withPerch(TextStyle style) {
+    final tp = TextPainter(
+      text: TextSpan(text: title, style: style),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final last = tp
+        .getBoxesForSelection(
+          TextSelection(
+            baseOffset: title.length - 1,
+            extentOffset: title.length,
+          ),
+        )
+        .first;
+    final metrics = tp.computeLineMetrics().first;
+    // The top of a lowercase letter: the baseline minus about half the ascent.
+    final top = metrics.baseline - metrics.ascent * 0.47;
+    final perch = Offset((last.left + last.right) / 2, top);
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Text(title, style: style),
+        logoOverlay!(perch),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -119,16 +147,13 @@ class Cover extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (logo != null) ...[
-          if (logoOverlay == null)
-            Image.asset(logo!, height: 82)
-          else
-            Stack(
-              clipBehavior: Clip.none,
-              children: [Image.asset(logo!, height: 82), logoOverlay!],
-            ),
+          Image.asset(logo!, height: 82),
           const SizedBox(height: 24),
         ],
-        Text(title, style: headline(logo == null ? 40 : 80)),
+        if (logoOverlay == null)
+          Text(title, style: headline(logo == null ? 40 : 80))
+        else
+          _withPerch(headline(logo == null ? 40 : 80)),
         if (contact != null) ...[
           const SizedBox(height: 28),
           Text(
