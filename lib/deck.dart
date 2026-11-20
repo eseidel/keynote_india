@@ -24,6 +24,7 @@ import 'whimsy_learning.dart';
 import 'whimsy_nohands.dart';
 import 'whimsy_notreplace.dart';
 import 'whimsy_pixels.dart';
+import 'whimsy_suitcase.dart';
 import 'whimsy_ribbon.dart';
 import 'whimsy_prompt.dart';
 import 'whimsy_scale.dart';
@@ -393,7 +394,7 @@ final List<Slide> deck = [
     notes: 'Scale. Google has millions of lines of Dart; its ads product is built in Dart. And businesses in this city.',
   ),
   const Slide(
-    Statement('Portable matters more.\nFlutter is how.'),
+    PortableStatement('Portable matters more.\nFlutter is how.'),
     section: Section.flutter,
     notes: 'Recap of the Flutter section.',
   ),
