@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'theme.dart';
+import 'whimsy_dividers.dart';
 
 /// How many builds of the current slide are showing. Without one (e.g. in
 /// renders), everything shows.
@@ -186,34 +187,16 @@ class Cover extends StatelessWidget {
   );
 }
 
-/// Section divider: small accent eyebrow, a short rule, a big title.
+/// Section divider: small accent eyebrow, a short rule, a big title. It
+/// makes an entrance (see whimsy_dividers.dart).
 class SectionDivider extends StatelessWidget {
   const SectionDivider({super.key, required this.eyebrow, required this.title});
   final String eyebrow;
   final String title;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(left: 242, right: 160),
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          eyebrow.toUpperCase(),
-          style: zalando(
-            16,
-            weight: 700,
-            color: Palette.accent,
-          ).copyWith(letterSpacing: 4),
-        ),
-        const SizedBox(height: 12),
-        Container(width: 147, height: 4, color: Palette.accent),
-        const SizedBox(height: 28),
-        Text(title, style: headline(54)),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) =>
+      DividerEntrance(eyebrow: eyebrow, title: title);
 }
 
 /// A title over a list of lines (agenda, numbered reasons, approaches).
