@@ -45,8 +45,8 @@ class _CeoShotSlideState extends State<CeoShotSlide>
   final _words = TextPainter(
     text: TextSpan(
       text: _said,
-      // About the app's own 11px UI text.
-      style: zalando(4.2, weight: 450, color: const Color(0xFFE8E8EC)),
+      // Sized so its caps match the app's own placeholder text.
+      style: zalando(4.7, weight: 450, color: const Color(0xFFE8E8EC)),
     ),
     textDirection: TextDirection.ltr,
     maxLines: 1,
@@ -267,7 +267,7 @@ class _AppPainter extends CustomPainter {
       // gives way to what he's saying.
       canvas.drawRect(
         Rect.fromLTRB(x - 3, f.top + 3, f.right - 3, f.bottom - 3),
-        Paint()..color = const Color(0xFF1B1B1F),
+        Paint()..color = const Color(0xFF121318), // the bar's own fill
       );
       canvas.drawRRect(
         rr,
@@ -293,7 +293,7 @@ class _AppPainter extends CustomPainter {
         );
       }
     }
-    // Then it acts: LGTM gets pressed (the button dips and darkens), and a
+    // Then it acts: LGTM gets pressed (the button darkens for a moment), and a
     // ring goes out from it.
     final b = Rect.fromLTRB(
       _lgtm.left * size.width,
@@ -304,7 +304,11 @@ class _AppPainter extends CustomPainter {
     final dip = math.sin(math.pi * _phase(ms, 3400, 3650));
     if (dip > 0) {
       canvas.drawRRect(
-        RRect.fromRectAndRadius(b, Radius.circular(b.height / 2)),
+        // A pixel taller than the measured rect, to cover its bottom edge.
+        RRect.fromRectAndRadius(
+          Rect.fromLTRB(b.left, b.top, b.right, b.bottom + 1),
+          Radius.circular(b.height / 2),
+        ),
         Paint()..color = Colors.black.withValues(alpha: 0.4 * dip),
       );
     }
