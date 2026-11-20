@@ -28,6 +28,7 @@ import 'whimsy_ribbon.dart';
 import 'whimsy_prompt.dart';
 import 'whimsy_scale.dart';
 import 'whimsy_sixty.dart';
+import 'whimsy_skills.dart';
 import 'whimsy_software.dart';
 import 'whimsy_squishy.dart';
 import 'whimsy_tokens.dart';
@@ -489,7 +490,7 @@ final List<Slide> deck = [
     notes: 'In times of change, it\'s about learning. Managers and business owners: give your people time and space to learn, to play and to fail. This conference\'s tagline is "Learning at scale."',
   ),
   const Slide(
-    Statement('Your skills still matter'),
+    SkillsStatement('Your skills still matter'),
     section: Section.us,
     notes: 'Taste, scars, judgment: knowing when the agent is bluffing. I learned what a HyperLogLog was last week, from an agent.',
   ),
