@@ -294,7 +294,9 @@ class _ShufflePainter extends CustomPainter {
       final pivot = Offset(box.center.dx, l.feet[i]);
       canvas.translate(pivot.dx + dx, pivot.dy + pos.dy);
       if (spin != 0) canvas.rotate(spin);
-      if (squash != 1) canvas.scale(2 - squash, squash);
+      // Only ever shrinks one axis: the max scale stays 1, so Impeller
+      // keeps using the glyphs it already rasterized.
+      if (squash != 1) canvas.scale(1, squash);
       canvas.translate(-pivot.dx, -pivot.dy);
       p.paint(canvas, Offset(box.left, 0));
       canvas.restore();
