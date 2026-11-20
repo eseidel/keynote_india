@@ -7,7 +7,7 @@ import 'theme.dart';
 /// The opening question again, answered by three rubber stamps: each answer
 /// slams down from above the slide in turn, the slide jolts, and a ring of
 /// ink kicks out from where it hit. Own two. Pay 3x. Two answers. Settles
-/// in under three seconds as the ordinary Callback layout.
+/// in under three seconds as plain text: the question over three answers.
 class StampedCallback extends StatefulWidget {
   const StampedCallback({
     super.key,
