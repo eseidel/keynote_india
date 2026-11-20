@@ -388,10 +388,17 @@ class Stat extends StatelessWidget {
 
 enum VerdictKind { good, bad }
 
+/// The big word under a verdict's label.
+TextStyle get verdictWord => zalando(56, weight: 500);
+
 /// "GOOD AT / Trivia" style verdicts, stacked with a rule between.
 class Verdicts extends StatelessWidget {
-  const Verdicts({super.key, required this.items});
+  const Verdicts({super.key, required this.items, this.words = const {}});
   final List<(VerdictKind, String)> items;
+
+  /// Live stand-ins for some words, by index: whimsy that settles to the
+  /// same word in [verdictWord].
+  final Map<int, Widget> words;
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -418,7 +425,7 @@ class Verdicts extends StatelessWidget {
               color: kind == VerdictKind.good ? Palette.accent : Palette.warn,
             ).copyWith(letterSpacing: 3),
           ),
-          Text(word, style: zalando(56, weight: 500)),
+          words[i] ?? Text(word, style: verdictWord),
         ],
       ],
     ),
