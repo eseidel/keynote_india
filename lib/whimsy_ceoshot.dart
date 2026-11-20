@@ -25,10 +25,12 @@ const _said =
     'Land #325 once CI is green, then walk me through the launch PRs.';
 
 // The app window, in canvas pixels, before the tilt.
-const _win = Rect.fromLTWH(440, 215, 1150, 738);
+const _win = Rect.fromLTWH(440, 215, 1150, 723);
 
 // Where the window sits inside the screenshot (the rest is its shadow).
-const _crop = (left: 0.035, top: 0.036, width: 0.93, height: 0.914);
+// (The window's bottom edge is at 0.931 of the image height, so the visible
+// height, 723, is 0.895 of the full image height.)
+const _crop = (left: 0.035, top: 0.036, width: 0.93);
 
 double _phase(double ms, double from, double to) =>
     ((ms - from) / (to - from)).clamp(0.0, 1.0);
@@ -43,11 +45,20 @@ class _CeoShotSlideState extends State<CeoShotSlide>
   final _words = TextPainter(
     text: TextSpan(
       text: _said,
-      style: zalando(6, color: Palette.text),
+      // About the app's own 11px UI text.
+      style: zalando(4.2, weight: 450, color: const Color(0xFFE8E8EC)),
     ),
     textDirection: TextDirection.ltr,
     maxLines: 1,
   )..layout();
+
+  /// Where each word of [_said] ends, so the dictation can land a whole
+  /// word at a time.
+  late final List<double> _wordEnds = [
+    for (var i = 0; i <= _said.length; i++)
+      if (i == _said.length || _said[i] == ' ')
+        _words.getOffsetForCaret(TextPosition(offset: i), Rect.zero).dx,
+  ];
 
   @override
   void dispose() {
@@ -87,7 +98,9 @@ class _CeoShotSlideState extends State<CeoShotSlide>
               ),
             ),
             Positioned.fill(
-              child: CustomPaint(painter: _AppPainter(_clock, _words)),
+              child: CustomPaint(
+                painter: _AppPainter(_clock, _words, _wordEnds),
+              ),
             ),
           ],
         ),
@@ -225,13 +238,17 @@ class _PanelsPainter extends CustomPainter {
 /// Drawn over the screenshot, in the window's own coordinates: the spoken
 /// words landing in the command bar, then LGTM getting pressed.
 class _AppPainter extends CustomPainter {
-  _AppPainter(this.t, this.words) : super(repaint: t);
+  _AppPainter(this.t, this.words, this.wordEnds) : super(repaint: t);
   final Animation<double> t;
   final TextPainter words;
+  final List<double> wordEnds;
 
-  // In fractions of the window (measured off the screenshot).
-  static const _field = Rect.fromLTRB(0.071, 0.162, 0.892, 0.201);
-  static const _lgtm = Offset(0.762, 0.543);
+  // In fractions of the window, measured off ceo_shot.png: the command bar,
+  // where its placeholder text starts (after the ⌘ glyph), and the #325
+  // LGTM button.
+  static const _field = Rect.fromLTRB(0.0699, 0.1607, 0.8925, 0.2018);
+  static const _textLeft = 0.0994;
+  static const _lgtm = Rect.fromLTRB(0.7333, 0.5318, 0.7909, 0.5643);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -245,8 +262,13 @@ class _AppPainter extends CustomPainter {
         _field.bottom * size.height,
       );
       final rr = RRect.fromRectAndRadius(f, const Radius.circular(5));
-      // The bar, focused: the placeholder gives way to what he's saying.
-      canvas.drawRRect(rr, Paint()..color = const Color(0xFF1B1B1F));
+      final x = _textLeft * size.width;
+      // The bar, focused: the placeholder (after the ⌘ glyph, which stays)
+      // gives way to what he's saying.
+      canvas.drawRect(
+        Rect.fromLTRB(x - 3, f.top + 3, f.right - 3, f.bottom - 3),
+        Paint()..color = const Color(0xFF1B1B1F),
+      );
       canvas.drawRRect(
         rr,
         Paint()
@@ -254,9 +276,10 @@ class _AppPainter extends CustomPainter {
           ..strokeWidth = 2
           ..color = Palette.accent.withValues(alpha: 0.85),
       );
-      final x = f.left + 38, y = f.center.dy - words.height / 2;
-      // Words arrive a few at a time, like dictation.
-      final shown = words.width * Curves.easeInOut.transform(typed);
+      final y = f.center.dy - words.height / 2;
+      // Words arrive whole, one at a time, like dictation.
+      final n = (Curves.easeInOut.transform(typed) * wordEnds.length).ceil();
+      final shown = n == 0 ? 0.0 : wordEnds[n - 1];
       canvas.save();
       canvas.clipRect(Rect.fromLTRB(x, f.top, x + shown, f.bottom));
       words.paint(canvas, Offset(x, y));
@@ -270,14 +293,32 @@ class _AppPainter extends CustomPainter {
         );
       }
     }
-    // Then it acts: LGTM gets pressed.
-    final press = _phase(ms, 3450, 4100);
+    // Then it acts: LGTM gets pressed (the button dips and darkens), and a
+    // ring goes out from it.
+    final b = Rect.fromLTRB(
+      _lgtm.left * size.width,
+      _lgtm.top * size.height,
+      _lgtm.right * size.width,
+      _lgtm.bottom * size.height,
+    );
+    final dip = math.sin(math.pi * _phase(ms, 3400, 3650));
+    if (dip > 0) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(b, Radius.circular(b.height / 2)),
+        Paint()..color = Colors.black.withValues(alpha: 0.4 * dip),
+      );
+    }
+    final press = _phase(ms, 3500, 4100);
     if (press > 0 && press < 1) {
-      final c = Offset(_lgtm.dx * size.width, _lgtm.dy * size.height);
+      final c = b.center;
       final e = Curves.easeOut.transform(press);
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromCenter(center: c, width: 70 + 50 * e, height: 26 + 30 * e),
+          Rect.fromCenter(
+            center: c,
+            width: b.width + 50 * e,
+            height: b.height + 30 * e,
+          ),
           const Radius.circular(30),
         ),
         Paint()
