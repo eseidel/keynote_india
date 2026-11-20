@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'layouts.dart';
 import 'materialize.dart';
+import 'whimsy_drift.dart';
 import 'whimsy_glitch.dart';
 import 'whimsy_tokens.dart';
 
@@ -188,7 +189,7 @@ final List<Slide> deck = [
     notes: "Two copies cost more than 2x: there's a third, coordination cost between them.",
   ),
   const Slide(
-    Statement('Two copies drift'),
+    DriftSlide('Two copies drift'),
     section: Section.flutter,
     notes: "If you found two ways to parse a string in your codebase, you'd delete one. Nobody argues for keeping both. Yet we entertain two completely separate ways to do everything in the app, just because of platforms. Bonkers. That subtle checkout code, copied from Swift to Kotlin: two copies drift. The only fix is to share.",
   ),
