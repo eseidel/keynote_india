@@ -44,14 +44,18 @@ class _BestStatementState extends State<BestStatement>
   }
 
   @override
-  Widget build(BuildContext context) => CustomPaint(
-    painter: _BestPainter(
-      _clock,
-      text: widget.text,
-      emphasis: widget.emphasis,
-      style: headline(widget.size),
+  Widget build(BuildContext context) => Semantics(
+    label: widget.text,
+    child: CustomPaint(
+      painter: _BestPainter(
+        _clock,
+        text: widget.text,
+        emphasis: widget.emphasis,
+        style: headline(widget.size),
+        textScaler: MediaQuery.textScalerOf(context),
+      ),
+      child: const SizedBox.expand(),
     ),
-    child: const SizedBox.expand(),
   );
 }
 
@@ -61,11 +65,61 @@ class _BestPainter extends CustomPainter {
     required this.text,
     required this.emphasis,
     required this.style,
+    required this.textScaler,
   }) : super(repaint: t);
   final Animation<double> t;
   final String text;
   final String emphasis;
   final TextStyle style;
+  final TextScaler textScaler;
+
+  // Three copies of the same layout, built once per width rather than per
+  // frame: the whole line, the line with its full stop transparent (before
+  // the stamp), and only the full stop (the stamp itself). Hiding glyphs by
+  // colour rather than by clipping keeps the neighbouring "e" whole.
+  double? _width;
+  late TextPainter _all, _noStop, _stopOnly;
+
+  TextPainter _layout(TextSpan span, double maxWidth) => TextPainter(
+    text: span,
+    textAlign: TextAlign.center,
+    textDirection: TextDirection.ltr,
+    textScaler: textScaler,
+  )..layout(maxWidth: maxWidth);
+
+  void _prepare(double maxWidth, bool hasStop) {
+    if (_width == maxWidth) return;
+    if (_width != null) {
+      _all.dispose();
+      _noStop.dispose();
+      _stopOnly.dispose();
+    }
+    _width = maxWidth;
+    final clear = style.copyWith(color: const Color(0x00000000));
+    final words = hasStop ? text.substring(0, text.length - 1) : text;
+    final stop = hasStop ? '.' : '';
+    _all = _layout(TextSpan(text: text, style: style), maxWidth);
+    _noStop = _layout(
+      TextSpan(
+        style: style,
+        children: [
+          TextSpan(text: words),
+          TextSpan(text: stop, style: clear),
+        ],
+      ),
+      maxWidth,
+    );
+    _stopOnly = _layout(
+      TextSpan(
+        style: style,
+        children: [
+          TextSpan(text: words, style: clear),
+          TextSpan(text: stop),
+        ],
+      ),
+      maxWidth,
+    );
+  }
 
   // Timeline (ms).
   static const _sheen = (150, 1050);
@@ -79,12 +133,10 @@ class _BestPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final ms = t.value * _totalMs;
+    final hasStop = text.endsWith('.');
     // Laid out like a Statement: centred, wrapping inside its padding.
-    final tp = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textAlign: TextAlign.center,
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: size.width - 320);
+    _prepare(size.width - 320, hasStop);
+    final tp = _all;
     final origin = Offset(
       (size.width - tp.width) / 2,
       (size.height - tp.height) / 2,
@@ -96,26 +148,16 @@ class _BestPainter extends CustomPainter {
         .toRect()
         .shift(origin);
 
-    final hasStop = text.endsWith('.');
     final stopBox = hasStop ? box(text.length - 1, text.length) : null;
     final stamped = !hasStop || ms >= _stampAt + _stampMs;
 
     // The words (the full stop held back until it stamps), with a sheen
     // of light sweeping across them.
-    canvas.save();
-    if (!stamped) {
-      canvas.clipPath(
-        Path.combine(
-          PathOperation.difference,
-          Path()..addRect(bounds.inflate(60)),
-          Path()..addRect(stopBox!),
-        ),
-      );
-    }
+    final words = stamped ? tp : _noStop;
     final sheen = _phase(ms, _sheen);
     if (sheen > 0 && sheen < 1) {
       canvas.saveLayer(bounds.inflate(40), Paint());
-      tp.paint(canvas, origin);
+      words.paint(canvas, origin);
       final x =
           bounds.left -
           300 +
@@ -138,9 +180,8 @@ class _BestPainter extends CustomPainter {
       );
       canvas.restore();
     } else {
-      tp.paint(canvas, origin);
+      words.paint(canvas, origin);
     }
-    canvas.restore();
 
     // The underline under the emphasis word, drawn left to right.
     final at = text.indexOf(emphasis);
@@ -175,12 +216,11 @@ class _BestPainter extends CustomPainter {
         canvas.translate(dot.dx, dot.dy);
         canvas.scale(scale);
         canvas.translate(-dot.dx, -dot.dy);
-        canvas.clipRect(r);
         canvas.saveLayer(
-          r,
+          r.inflate(8),
           Paint()..color = Color.fromRGBO(0, 0, 0, math.min(1, s * 2.5)),
         );
-        tp.paint(canvas, origin);
+        _stopOnly.paint(canvas, origin);
         canvas.restore();
         canvas.restore();
       }
@@ -197,10 +237,12 @@ class _BestPainter extends CustomPainter {
         );
       }
     }
-    tp.dispose();
   }
 
   @override
   bool shouldRepaint(_BestPainter old) =>
-      old.text != text || old.emphasis != emphasis || old.style != style;
+      old.text != text ||
+      old.emphasis != emphasis ||
+      old.style != style ||
+      old.textScaler != textScaler;
 }
