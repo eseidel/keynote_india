@@ -11,6 +11,7 @@ import 'whimsy_builtown.dart';
 import 'whimsy_callback.dart';
 import 'whimsy_cambrian.dart';
 import 'whimsy_compounds.dart';
+import 'whimsy_cover.dart';
 import 'whimsy_dash.dart';
 import 'whimsy_developers.dart';
 import 'whimsy_drift.dart';
@@ -72,7 +73,7 @@ String img(String name) => 'assets/images/$name';
 final List<Slide> deck = [
   // Opening
   Slide(
-    const Cover(
+    const FlutteringCover(
       title: 'Why AI Makes Flutter\nMore Important, Not Less',
       byline: ['Eric Seidel', 'CEO of Shorebird', 'Co-founder of Flutter'],
     ),
