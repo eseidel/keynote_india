@@ -118,7 +118,7 @@ class _BenchPainter extends CustomPainter {
 
   // Timeline (ms).
   static const _peelLen = 420.0; // the corner lifts
-  static const _flyLen = 1100.0; // then it flutters off and fades
+  static const _flyLen = 1500.0; // then it flutters up and away
   static const _lean = (1500.0, 2300.0);
   static const _bubbleA = 1900.0, _bubbleB = 2350.0, _bubbleLen = 380.0;
   static const _heart = (2700.0, 3700.0);
@@ -176,6 +176,8 @@ class _BenchPainter extends CustomPainter {
   static final _labelB = _tp(_b.label, 11, const Color(0xFF237C7E), 800);
   static final _sayA = _tp('Love this app!', 10.5, _ink, 700);
   static final _sayB = _tp('Me too!', 10.5, _ink, 700);
+
+  static double _step(double v, double by) => (v / by).roundToDouble() * by;
 
   static double _span(double ms, double from, double len) =>
       ((ms - from) / len).clamp(0.0, 1.0);
@@ -272,7 +274,17 @@ class _BenchPainter extends CustomPainter {
   }
 
   void _benchSeat(Canvas canvas) {
-    // The seat's front edge; the laps come forward over it.
+    // The seat's top, seen a little from above, so there's somewhere to
+    // sit; then its front edge, which the thighs come forward over.
+    canvas.drawPath(
+      Path()
+        ..moveTo(122, _seatY - 22)
+        ..lineTo(678, _seatY - 22)
+        ..lineTo(704, _seatY)
+        ..lineTo(96, _seatY)
+        ..close(),
+      Paint()..color = _woodLight,
+    );
     _plank(canvas, const Rect.fromLTWH(96, _seatY - 4, 608, 28));
   }
 
@@ -306,9 +318,9 @@ class _BenchPainter extends CustomPainter {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
           Rect.fromCenter(
-            center: Offset(p.x + dx, _seatY + 58),
+            center: Offset(p.x + dx, _seatY + 64),
             width: 40,
-            height: 100,
+            height: 88,
           ),
           const Radius.circular(14),
         ),
@@ -329,14 +341,6 @@ class _BenchPainter extends CustomPainter {
     canvas.translate(p.x, _seatY);
     canvas.rotate(-p.side * 0.07 * lean);
 
-    // Lap.
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        const Rect.fromLTRB(-76, -14, 76, 36),
-        const Radius.circular(18),
-      ),
-      pants,
-    );
     // Torso.
     canvas.drawRRect(
       RRect.fromRectAndCorners(
@@ -402,6 +406,27 @@ class _BenchPainter extends CustomPainter {
 
     _head(canvas, p, lean);
     canvas.restore();
+
+    // Sitting: the thighs come forward over the seat's edge toward us and
+    // end in bent knees, over the bottom of the shirt. They don't lean.
+    for (final s in [-1.0, 1.0]) {
+      final k = Offset(p.x + s * 37, _seatY + 16);
+      canvas.drawOval(Rect.fromCenter(center: k, width: 80, height: 62), pants);
+      // Light on the kneecap.
+      canvas.drawOval(
+        Rect.fromCenter(center: k + const Offset(0, 12), width: 40, height: 20),
+        Paint()..color = Color.lerp(p.pants, Colors.white, 0.07)!,
+      );
+    }
+    // The crease between the knees.
+    canvas.drawLine(
+      Offset(p.x, _seatY - 6),
+      Offset(p.x, _seatY + 36),
+      Paint()
+        ..color = Color.lerp(p.pants, Colors.black, 0.3)!
+        ..strokeWidth = 3
+        ..strokeCap = StrokeCap.round,
+    );
   }
 
   void _phone(Canvas canvas, double ms) {
@@ -448,7 +473,7 @@ class _BenchPainter extends CustomPainter {
   void _head(Canvas canvas, _Person p, double lean) {
     final skin = Paint()..color = p.skin;
     final hair = Paint()..color = p.hair;
-    const c = Offset(0, -288);
+    const c = _c;
 
     canvas.save();
     // The head tilts a little more than the body, toward the friend.
@@ -556,7 +581,8 @@ class _BenchPainter extends CustomPainter {
     final pivot = p.side < 0 ? r.topRight : r.topLeft;
     canvas.translate(pivot.dx, pivot.dy);
     canvas.rotate(p.side * 0.35 * Curves.easeIn.transform(lift));
-    canvas.scale(1 + 0.08 * lift);
+    // Stepped, so the label's glyphs come in a few sizes, not one a frame.
+    canvas.scale(1 + _step(0.08 * lift, 0.04));
     canvas.translate(-pivot.dx, -pivot.dy);
     _stickerBody(canvas, r, label, lift);
     canvas.restore();
@@ -568,15 +594,21 @@ class _BenchPainter extends CustomPainter {
     if (f <= 0 || f >= 1) return;
     final r = _stickerRect(label);
     final pivot = p.side < 0 ? r.topRight : r.topLeft;
-    final a = 1 - f * f;
-    // Starts exactly where the peel left it (the bodies don't lean yet).
+    // Fully there for most of the trip; gone by the end.
+    final a = 1 - math.pow(f, 4).toDouble();
+    final e = Curves.easeOut.transform(f);
+    // Starts exactly where the peel left it (the bodies don't lean yet),
+    // then catches the breeze: up and out past the person's shoulder,
+    // swaying and tumbling like a leaf.
     canvas.save();
     canvas.translate(
-      p.x + pivot.dx + p.side * 250 * f + 16 * math.sin(f * 9),
-      _seatY + pivot.dy + 330 * f * f - 190 * f,
+      p.x + pivot.dx + p.side * 290 * e + 22 * math.sin(f * 8),
+      _seatY + pivot.dy - 400 * e + 40 * f * f,
     );
-    canvas.rotate(p.side * (0.35 + 2.2 * f));
-    canvas.scale(1.08, 1.08 * math.cos(f * 7).abs().clamp(0.25, 1.0));
+    canvas.rotate(p.side * (0.35 + 1.8 * f) + 0.3 * math.sin(f * 10));
+    // The tumble squashes it edge-on and back. Stepped, like the peel.
+    final squash = _step(math.cos(f * 7).abs(), 0.25).clamp(0.25, 1.0);
+    canvas.scale(1.08, 1.08 * squash);
     canvas.translate(-pivot.dx, -pivot.dy);
     _stickerBody(canvas, r, label, 1, alpha: a);
     canvas.restore();
@@ -652,7 +684,13 @@ class _BenchPainter extends CustomPainter {
     canvas.drawPath(tip, outline);
     canvas.drawRRect(round, fill);
     canvas.drawPath(tip, fill);
-    say.paint(canvas, Offset(-say.width / 2, -say.height / 2));
+    // The bubble pops smoothly; its words snap between a few sizes (and
+    // wait until it's half grown), so Impeller doesn't rasterize a new
+    // glyph size every frame.
+    if (s >= 0.5) {
+      canvas.scale(_step(s, 0.1) / s);
+      say.paint(canvas, Offset(-say.width / 2, -say.height / 2));
+    }
     canvas.restore();
   }
 
@@ -660,7 +698,7 @@ class _BenchPainter extends CustomPainter {
     final k = _span(ms, _heart.$1, _heart.$2 - _heart.$1);
     if (k <= 0) return;
     final e = Curves.easeOutCubic.transform(k);
-    final c = Offset.lerp(const Offset(400, 470), const Offset(400, 262), e)!;
+    final c = Offset.lerp(const Offset(400, 440), const Offset(400, 222), e)!;
     final pop = Curves.easeOutBack.transform(math.min(1, k * 2.2));
     final r = 26 * pop;
     // A warm glow behind it.
