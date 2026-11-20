@@ -68,7 +68,7 @@ const _places = <_Place>[
     startMs: 370,
   ),
   (
-    center: Offset(430, 735),
+    center: Offset(400, 765),
     picture: Size(190, 413),
     roll: 0.1,
     yaw: 0.1,
@@ -93,6 +93,17 @@ class _CambrianWallState extends State<CambrianWall>
     vsync: this,
     duration: const Duration(milliseconds: _totalMs),
   )..forward();
+
+  @override
+  void initState() {
+    super.initState();
+    // _places is hand-laid-out for exactly these four pictures; a fifth
+    // would silently never appear.
+    assert(
+      widget.items.length == _places.length,
+      'CambrianWall lays out exactly ${_places.length} items',
+    );
+  }
 
   @override
   void dispose() {
@@ -164,7 +175,14 @@ class _CambrianWallState extends State<CambrianWall>
     final p = _ramp(ms, 0, _flyMs);
     final travel = 1 - Curves.easeOutBack.transform(p); // overshoots a bit
     final lift = 1 - Curves.easeOutCubic.transform(p); // 1 in the air
-    final grow = Curves.easeOutCubic.transform(_ramp(ms, 0, _flyMs * 0.6));
+    final grow = Curves.easeOutCubic.transform(_ramp(ms, 0, _flyMs * 0.3));
+    // Held high (25% bigger, long shadow) through the first part of the
+    // flight, then set down onto the slide.
+    final hover =
+        1 -
+        Curves.easeInOutCubic.transform(
+          _ramp(ms, _flyMs * 0.25, _flyMs * 0.75),
+        );
     final opacity = ms <= 0 ? 0.0 : _ramp(ms, 0, 120);
     // The flash peaks as it lands and drains away.
     final flash = 0.75 * math.pow(1 - _ramp(ms, _flyMs * 0.45, 650), 2);
@@ -177,10 +195,10 @@ class _CambrianWallState extends State<CambrianWall>
       ..rotateY(place.yaw + 0.8 * lift * (i.isEven ? -1 : 1))
       ..rotateX(place.pitch + 0.5 * lift)
       ..rotateZ(place.roll + spin * lift)
-      // Grows from a speck, overshooting into "lifted" size, then settles.
+      // Grows from a speck to a lifted 1.25x, then is set down at 1x.
       ..scaleByDouble(
-        (0.15 + 0.85 * grow) * (1 + 0.18 * lift),
-        (0.15 + 0.85 * grow) * (1 + 0.18 * lift),
+        (0.15 + 0.85 * grow) * (1 + 0.25 * hover),
+        (0.15 + 0.85 * grow) * (1 + 0.25 * hover),
         1,
         1,
       );
@@ -197,9 +215,9 @@ class _CambrianWallState extends State<CambrianWall>
             border: Border.all(color: const Color(0x1FFFFFFF)),
             boxShadow: [
               BoxShadow(
-                color: Color.fromRGBO(0, 0, 0, 0.55 - 0.2 * lift),
-                blurRadius: 18 + 50 * lift,
-                offset: Offset(0, 14 + 60 * lift),
+                color: Color.fromRGBO(0, 0, 0, 0.55 - 0.2 * hover),
+                blurRadius: 18 + 50 * hover,
+                offset: Offset(0, 14 + 60 * hover),
               ),
             ],
           ),
