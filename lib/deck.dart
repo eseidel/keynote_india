@@ -29,6 +29,7 @@ import 'whimsy_lead.dart';
 import 'whimsy_learners.dart';
 import 'whimsy_learning.dart';
 import 'whimsy_nohands.dart';
+import 'whimsy_people.dart';
 import 'whimsy_notreplace.dart';
 import 'whimsy_owning.dart';
 import 'whimsy_pixels.dart';
@@ -516,12 +517,8 @@ final List<Slide> deck = [
     section: Section.us,
     notes: 'Good outcomes, good tools, kindness, going home to play with your kids instead of writing a second platform.',
   ),
-  Slide(
-    SplitImage(
-      text: 'Build for people,\nnot platforms',
-      image: img('g3f42c810597_1_12.png'),
-      size: 56,
-    ),
+  const Slide(
+    PeopleSplit(text: 'Build for people,\nnot platforms', size: 56),
     section: Section.us,
     notes: 'People, not platforms.',
   ),
