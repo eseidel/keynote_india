@@ -8,6 +8,7 @@ import 'whimsy_dash.dart';
 import 'whimsy_drift.dart';
 import 'whimsy_future.dart';
 import 'whimsy_glitch.dart';
+import 'whimsy_intent.dart';
 import 'whimsy_pixels.dart';
 import 'whimsy_software.dart';
 import 'whimsy_tokens.dart';
@@ -219,7 +220,7 @@ final List<Slide> deck = [
     notes: "Code isn't for the machines. It's us writing down our intent.",
   ),
   const Slide(
-    Statement('Code captures intent'),
+    IntentStatement('Code captures intent'),
     section: Section.flutter,
     notes: 'Every piece of intent is the end of an argument. Argue once, build once, maintain once.',
   ),
