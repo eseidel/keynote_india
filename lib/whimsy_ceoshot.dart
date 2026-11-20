@@ -44,8 +44,8 @@ class _CeoShotSlideState extends State<CeoShotSlide>
   final _words = TextPainter(
     text: TextSpan(
       text: _said,
-      // About the app's own 11px UI text.
-      style: zalando(4.2, weight: 450, color: const Color(0xFFE8E8EC)),
+      // Sized so its caps match the app's own placeholder text.
+      style: zalando(4.7, weight: 450, color: const Color(0xFFE8E8EC)),
     ),
     textDirection: TextDirection.ltr,
     maxLines: 1,
@@ -247,7 +247,7 @@ class _AppPainter extends CustomPainter {
   // LGTM button.
   static const _field = Rect.fromLTRB(0.0699, 0.1607, 0.8925, 0.2018);
   static const _textLeft = 0.0994;
-  static const _lgtm = Rect.fromLTRB(0.7333, 0.5318, 0.7909, 0.5643);
+  static const _lgtm = Rect.fromLTRB(0.7333, 0.5318, 0.7909, 0.5655);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -266,7 +266,7 @@ class _AppPainter extends CustomPainter {
       // gives way to what he's saying.
       canvas.drawRect(
         Rect.fromLTRB(x - 3, f.top + 3, f.right - 3, f.bottom - 3),
-        Paint()..color = const Color(0xFF1B1B1F),
+        Paint()..color = const Color(0xFF121318), // the bar's own fill
       );
       canvas.drawRRect(
         rr,
@@ -292,7 +292,7 @@ class _AppPainter extends CustomPainter {
         );
       }
     }
-    // Then it acts: LGTM gets pressed (the button dips and darkens), and a
+    // Then it acts: LGTM gets pressed (the button darkens for a moment), and a
     // ring goes out from it.
     final b = Rect.fromLTRB(
       _lgtm.left * size.width,
