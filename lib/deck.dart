@@ -9,6 +9,7 @@ import 'whimsy_glitch.dart';
 import 'whimsy_pixels.dart';
 import 'whimsy_tokens.dart';
 import 'whimsy_truth.dart';
+import 'whimsy_weird.dart';
 
 enum Section { ai, flutter, us }
 
@@ -428,7 +429,7 @@ final List<Slide> deck = [
     notes: "Most won't call themselves Flutter developers.",
   ),
   const Slide(
-    Statement('The new world is weird'),
+    WeirdStatement('The new world is weird'),
     section: Section.us,
     notes: "We don't know yet. So many explorations, everyone experimenting. Here's mine.",
   ),
