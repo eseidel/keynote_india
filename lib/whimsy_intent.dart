@@ -9,7 +9,7 @@ import 'theme.dart';
 /// another. When the argument is over, the bubbles collapse into the middle
 /// and resolve into the one line of code that captures what was decided,
 /// with the decisions from the bubbles (3, keepCart) highlighted in it.
-/// Argue once, build once. Plays once and settles in about five seconds.
+/// Argue once, build once. Plays once and settles in about six seconds.
 class IntentStatement extends StatefulWidget {
   const IntentStatement(this.text, {super.key});
   final String text;
@@ -26,10 +26,11 @@ const _argument = [
   (true, 'Never lose their ', 'cart.'),
 ];
 
-const _total = 5400; // ms
+const _total = 5800; // ms
 const _firstBubble = 350, _perBubble = 720, _pop = 380;
-const _collapse = 3350, _collapseLen = 550;
-const _code = 3800, _codeLen = 600;
+// The last bubble lands at ~2.9s; let the punchline sit before collapsing.
+const _collapse = 3750, _collapseLen = 550;
+const _code = 4200, _codeLen = 600;
 
 class _IntentStatementState extends State<IntentStatement>
     with SingleTickerProviderStateMixin {
@@ -176,8 +177,26 @@ class _BubblePainter extends CustomPainter {
   final Color fill;
   final Color edge;
 
+  /// The outline depends only on the side and the bubble's (fixed) layout
+  /// size, so build it once instead of re-running the path union every frame
+  /// while the bubbles pop and collapse.
+  static final _shapes = <(bool, Size), Path>{};
+
   @override
   void paint(Canvas canvas, Size size) {
+    final shape = _shapes[(right, size)] ??= _shape(size);
+    canvas.drawPath(shape, Paint()..color = Palette.background);
+    canvas.drawPath(shape, Paint()..color = fill);
+    canvas.drawPath(
+      shape,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..color = edge,
+    );
+  }
+
+  Path _shape(Size size) {
     final body = RRect.fromRectAndRadius(
       Offset.zero & size,
       Radius.circular(size.height / 2),
@@ -197,20 +216,7 @@ class _BubblePainter extends CustomPainter {
         ..quadraticBezierTo(4, h - 6, 14, h - 26)
         ..close();
     }
-    final shape = Path.combine(
-      PathOperation.union,
-      Path()..addRRect(body),
-      tail,
-    );
-    canvas.drawPath(shape, Paint()..color = Palette.background);
-    canvas.drawPath(shape, Paint()..color = fill);
-    canvas.drawPath(
-      shape,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5
-        ..color = edge,
-    );
+    return Path.combine(PathOperation.union, Path()..addRRect(body), tail);
   }
 
   @override
@@ -229,7 +235,8 @@ class _CodeLine extends StatelessWidget {
   Widget build(BuildContext context) {
     final pop = Curves.easeOutBack.transform(t);
     // A flash as the bubbles land, easing to a steady soft glow.
-    final flash = 0.35 + 0.65 * math.pow(1 - glow, 2).toDouble();
+    final burst = math.pow(1 - glow, 2).toDouble();
+    final flash = 0.35 + 0.65 * burst;
     TextSpan s(String text, Color color, {double weight = 600}) => TextSpan(
       text: text,
       style: zalando(24, weight: weight, color: color),
@@ -249,7 +256,8 @@ class _CodeLine extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Palette.accent.withValues(alpha: 0.45 * flash),
+                // Settles at 0.3 so the steady glow still reads at rest.
+                color: Palette.accent.withValues(alpha: 0.3 + 0.2 * burst),
                 blurRadius: 40 + 50 * flash,
               ),
             ],
