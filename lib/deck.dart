@@ -7,6 +7,7 @@ import 'whimsy_approaches.dart';
 import 'whimsy_barriers.dart';
 import 'whimsy_bird.dart';
 import 'whimsy_cambrian.dart';
+import 'whimsy_compounds.dart';
 import 'whimsy_dash.dart';
 import 'whimsy_developers.dart';
 import 'whimsy_drift.dart';
@@ -180,12 +181,8 @@ final List<Slide> deck = [
     section: Section.flutter,
     notes: "Generation is cheap; ownership isn't. Every line you wrote yesterday, you pay for today. Orders of magnitude more code per person per day makes that compounding cost the dominant one.",
   ),
-  Slide(
-    SplitImage(
-      text: 'Code\ncompounds',
-      image: img('g3f42c810597_1_1.png'),
-      size: 54,
-    ),
+  const Slide(
+    CompoundsSlide(text: 'Code\ncompounds', size: 54),
     section: Section.flutter,
     notes: 'Every line you wrote yesterday, you pay for today: builds, tests, docs, tokens, context.',
   ),
