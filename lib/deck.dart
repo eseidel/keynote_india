@@ -11,6 +11,7 @@ import 'whimsy_glitch.dart';
 import 'whimsy_intent.dart';
 import 'whimsy_nohands.dart';
 import 'whimsy_pixels.dart';
+import 'whimsy_sixty.dart';
 import 'whimsy_software.dart';
 import 'whimsy_tokens.dart';
 import 'whimsy_truth.dart';
@@ -178,8 +179,7 @@ final List<Slide> deck = [
     notes: 'Every line you wrote yesterday, you pay for today: builds, tests, docs, tokens, context.',
   ),
   const Slide(
-    Stat(
-      value: '60%',
+    SixtyStat(
       caption:
           'A unified codebase let SoFi cut roughly a million lines of code',
     ),
