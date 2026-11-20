@@ -45,11 +45,18 @@ class _LeadStatementState extends State<LeadStatement>
   );
 }
 
-class _Dot {
-  _Dot(this.from, this.bend, this.to, this.delay, this.r, this.color);
+/// How one dot flies in: a quadratic path, when it starts, and its size.
+class _Flight {
+  const _Flight(this.from, this.bend, this.to, this.delay, this.r);
   final Offset from, bend, to; // quadratic path: from, control, to
   final double delay; // ms
   final double r;
+}
+
+/// A follower: its flight and its color.
+class _Dot {
+  const _Dot(this.flight, this.color);
+  final _Flight flight;
   final int color; // index into _colors
 }
 
@@ -74,31 +81,36 @@ class _FlockPainter extends CustomPainter {
   ];
 
   static final List<_Dot> _dots = _build();
-  static final _leader = _Dot(
-    const Offset(1990, 640),
-    const Offset(1600, 900),
-    _tip + const Offset(40, 0),
+  static const _leader = _Flight(
+    Offset(1990, 640),
+    Offset(1600, 900),
+    Offset(1180, 810), // 40px ahead of the tip
     150,
     13,
-    -1,
   );
 
   static List<_Dot> _build() {
     final rnd = math.Random(60);
     final dots = <_Dot>[];
     // Each arm: two staggered ranks, so it reads as a crowd, not a line.
+    // The inner rank runs parallel to the arm, 20px inside it, and starts
+    // a third of the way back: nearer the tip the two arms are too close
+    // together for it, and its dots would cross the middle and clump.
     const perRank = 13;
+    const armLen = 573.8; // |(_armDx, _armDy)|
     for (final side in [-1.0, 1.0]) {
+      // Unit normal from this arm toward the middle of the V.
+      const nx = -_armDy / armLen, ny = _armDx / armLen;
+      final inward = Offset(nx, -side * ny);
       for (var rank = 0; rank < 2; rank++) {
-        final n = perRank - rank;
-        for (var k = 0; k < n; k++) {
-          final f = (k + 1 + rank * 0.5) / perRank; // 0 near the tip
+        for (var k = rank * 4; k < perRank; k++) {
+          final f = (k + 1.3 + rank * 0.5) / perRank; // 0 near the tip
+          if (f > 1) continue;
           final back = Offset(-_armDx * f, side * _armDy * f);
-          // The inner rank sits a little inside the V.
-          final inner = Offset(-18.0 * rank, -side * 22.0 * rank);
+          final inner = inward * 20.0 * rank.toDouble();
           final jitter = Offset(
-            (rnd.nextDouble() - 0.5) * 14,
-            (rnd.nextDouble() - 0.5) * 14,
+            (rnd.nextDouble() - 0.5) * 8,
+            (rnd.nextDouble() - 0.5) * 8,
           );
           final to = _tip + back + inner + jitter;
           final from = _edgePoint(rnd);
@@ -111,11 +123,7 @@ class _FlockPainter extends CustomPainter {
           final delay = 250 + 700 * f + rnd.nextDouble() * 350;
           dots.add(
             _Dot(
-              from,
-              bend,
-              to,
-              delay,
-              6 + rnd.nextDouble() * 3.5,
+              _Flight(from, bend, to, delay, 6 + rnd.nextDouble() * 3.5),
               rnd.nextInt(_colors.length),
             ),
           );
@@ -136,7 +144,7 @@ class _FlockPainter extends CustomPainter {
     };
   }
 
-  static Offset _at(_Dot d, double ms) {
+  static Offset _at(_Flight d, double ms) {
     final p = ((ms - d.delay) / _flyMs).clamp(0.0, 1.0);
     final e = Curves.easeOutCubic.transform(p);
     final a = Offset.lerp(d.from, d.bend, e)!;
@@ -148,26 +156,30 @@ class _FlockPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final ms = t.value * _totalMs;
     final goT = ((ms - _goMs.$1) / (_goMs.$2 - _goMs.$1)).clamp(0.0, 1.0);
-    // Followers lag the leader by a hair when they set off, like a flock.
+    // Setting off: the leader goes first and every follower a little
+    // later the further back it sits, so no one ever passes the leader.
+    double glide(double lag) => Curves.easeInOutCubic.transform(
+      ((goT + lag * 0.18) / 0.82).clamp(0.0, 1.0),
+    );
     final paths = [for (final _ in _colors) Path()];
     final trails = [for (final _ in _colors) Path()];
-    for (final d in _dots) {
+    for (final dot in _dots) {
+      final d = dot.flight;
       if (ms < d.delay) continue;
-      final lag = (d.to.dx - _tip.dx) / _armDx; // 0 at tip, -1 at tail
-      final g = Curves.easeInOutCubic.transform(
-        ((goT + lag * 0.18) / 0.82).clamp(0.0, 1.0),
-      );
+      // 0 at the tip, -1 at the tail; every follower is behind the tip.
+      final lag = math.min(0.0, (d.to.dx - _tip.dx) / _armDx);
+      final g = glide(lag);
       final p = _at(d, ms) + Offset(_go * g, 0);
       // A little pulse as each one finds its place.
       final land = ((ms - d.delay) / _flyMs - 0.8) / 0.2;
       final pulse = land > 0 && land < 1 ? 0.35 * math.sin(land * math.pi) : 0;
-      paths[d.color].addOval(
+      paths[dot.color].addOval(
         Rect.fromCircle(center: p, radius: d.r * (1 + pulse)),
       );
       // A short streak behind a dot still in flight.
       final q = _at(d, ms - 70) + Offset(_go * g, 0);
       if ((p - q).distance > 3) {
-        trails[d.color]
+        trails[dot.color]
           ..moveTo(q.dx, q.dy)
           ..lineTo(p.dx, p.dy);
       }
@@ -186,7 +198,7 @@ class _FlockPainter extends CustomPainter {
 
     // The leader: first in, warm, with a soft glow, out in front.
     if (ms >= _leader.delay) {
-      final g = Curves.easeInOutCubic.transform(goT);
+      final g = glide(0);
       final p = _at(_leader, ms) + Offset(_go * g, 0);
       final arrived = ((ms - _leader.delay - _flyMs * 0.8) / 500).clamp(
         0.0,
