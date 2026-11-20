@@ -20,6 +20,7 @@ import 'whimsy_glitch.dart';
 import 'whimsy_halfmillion.dart';
 import 'whimsy_important.dart';
 import 'whimsy_intent.dart';
+import 'whimsy_jobsame.dart';
 import 'whimsy_jobtitle.dart';
 import 'whimsy_lead.dart';
 import 'whimsy_learners.dart';
@@ -458,7 +459,7 @@ final List<Slide> deck = [
     notes: "First thing in this section. Not the same as three months ago, or a year ago. We don't even have the words yet.",
   ),
   const Slide(
-    Statement('Our jobs changed.\nAnd stayed the same.'),
+    JobsSameStatement('Our jobs changed.\nAnd stayed the same.'),
     section: Section.us,
     notes: 'Our job is still to deliver value to customers through technology. That core hasn\'t moved.',
   ),
