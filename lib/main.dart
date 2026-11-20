@@ -8,9 +8,15 @@ import 'package:flutter/services.dart';
 
 import 'deck.dart';
 import 'layouts.dart';
+import 'materialize.dart' show preloadHelmet;
+import 'shatter.dart';
 import 'theme.dart';
 
-void main() => runApp(const KeynoteApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  preloadHelmet();
+  runApp(const KeynoteApp());
+}
 
 class KeynoteApp extends StatelessWidget {
   const KeynoteApp({super.key});
@@ -40,6 +46,8 @@ class _PresenterState extends State<Presenter> {
   bool showNotes = false;
   final focus = FocusNode();
   final boundary = GlobalKey();
+  ui.Image? shatter; // outgoing slide, while its glass flies off
+  bool _capturing = false;
 
   @override
   void initState() {
@@ -75,8 +83,32 @@ class _PresenterState extends State<Presenter> {
     step = atEnd ? deck[index].builds : 0;
   });
 
-  void next() =>
-      step < deck[index].builds ? setState(() => step++) : go(index + 1);
+  void next() {
+    if (step < deck[index].builds) return setState(() => step++);
+    if (deck[index].shatterOut && index < deck.length - 1) {
+      _shatterTo(index + 1);
+    } else {
+      go(index + 1);
+    }
+  }
+
+  /// Snapshots the current slide, cuts to the next one underneath, and
+  /// lays the snapshot over it as glass that shatters away.
+  Future<void> _shatterTo(int i) async {
+    if (_capturing) return;
+    _capturing = true;
+    final ro =
+        boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+    final image = await ro.toImage();
+    _capturing = false;
+    if (!mounted) return;
+    setState(() {
+      shatter?.dispose();
+      shatter = image;
+      index = i;
+      step = 0;
+    });
+  }
 
   void back() => step > 0 ? setState(() => step--) : go(index - 1, atEnd: true);
 
@@ -133,16 +165,32 @@ class _PresenterState extends State<Presenter> {
                         key: boundary,
                         child: SizedBox.fromSize(
                           size: canvasSize,
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 250),
-                            child: BuildStep(
-                              key: ValueKey(index),
-                              step: step,
-                              child: SlideFrame(
-                                slide: slide,
-                                number: index + 1,
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              AnimatedSwitcher(
+                                duration: shatter != null
+                                    ? Duration.zero
+                                    : const Duration(milliseconds: 250),
+                                child: BuildStep(
+                                  key: ValueKey(index),
+                                  step: step,
+                                  child: SlideFrame(
+                                    slide: slide,
+                                    number: index + 1,
+                                  ),
+                                ),
                               ),
-                            ),
+                              if (shatter != null)
+                                ShatterOverlay(
+                                  key: ObjectKey(shatter),
+                                  image: shatter!,
+                                  onDone: () => setState(() {
+                                    shatter?.dispose();
+                                    shatter = null;
+                                  }),
+                                ),
+                            ],
                           ),
                         ),
                       ),

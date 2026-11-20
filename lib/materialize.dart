@@ -40,7 +40,6 @@ abstract final class _Look {
 
   /// Seconds for the full materialize; the exit runs at [exitSpeed]x.
   static const duration = 7.0, exitSpeed = 2.2;
-  static const leadIn = 0.6; // seconds of empty frame before it starts
 }
 
 class MaterializeHelmet extends StatefulWidget {
@@ -50,43 +49,28 @@ class MaterializeHelmet extends StatefulWidget {
   State<MaterializeHelmet> createState() => _MaterializeHelmetState();
 }
 
-class _MaterializeHelmetState extends State<MaterializeHelmet> {
+/// The loaded demo: one scene, built once at app start (see
+/// [preloadHelmet]) so the slide starts the moment it appears.
+class _Helmet {
+  static final _Helmet instance = _Helmet();
   final Scene scene = Scene();
-  bool _ready = false;
-  Object? _error;
+  late final Future<void> ready = _load();
 
   final List<PreprocessedMaterial> _shellMaterials = [];
   final List<(PreprocessedMaterial, LineSegmentsGeometry)> _wirePasses = [];
   final List<(Node, PreprocessedMaterial)> _glassPasses = [];
-  final Node _spin = Node(name: 'materialize_spin');
+  final Node spin = Node(name: 'materialize_spin');
 
   double _minH = 0, _maxH = 1;
   final vm.Vector3 _center = vm.Vector3.zero();
   double get _range => math.max(_maxH - _minH, 1e-3);
-  PerspectiveCamera _camera = PerspectiveCamera(position: vm.Vector3(0, 0, -3));
-
-  // Progress 0 (nothing) to 1 (solid); starts slightly negative as a lead-in.
-  double _progress = -_Look.leadIn / _Look.duration;
-  bool _exiting = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _exiting = BuildStep.of(context) >= 1;
-  }
+  PerspectiveCamera camera = PerspectiveCamera(position: vm.Vector3(0, 0, -3));
 
   Future<void> _load() async {
     try {
       await Scene.initializeStaticResources();
       final data = await rootBundle.load('models/DamagedHelmet.glb');
       final helmet = await Node.fromGlbBytes(data.buffer.asUint8List());
-      if (!mounted) return;
 
       for (final meshNode in helmet.meshNodes.toList()) {
         final parts = <MeshData>[];
@@ -98,7 +82,6 @@ class _MaterializeHelmetState extends State<MaterializeHelmet> {
           _shellMaterials.add(shell);
         }
         final derived = await compute(_derive, MeshData.merge(parts));
-        if (!mounted) return;
 
         final wire = await loadFmatMaterial(
           'assets/materialize_wireframe.fmat',
@@ -127,9 +110,9 @@ class _MaterializeHelmetState extends State<MaterializeHelmet> {
       _minH = bounds.min.y;
       _maxH = bounds.max.y;
       _center.setFrom(bounds.center);
-      _spin.add(helmet);
-      scene.add(_spin);
-      _camera = PerspectiveCamera.framing(
+      spin.add(helmet);
+      scene.add(spin);
+      camera = PerspectiveCamera.framing(
         bounds,
         direction: vm.Vector3(0.4, 0.5, -2.6),
       );
@@ -154,11 +137,10 @@ class _MaterializeHelmetState extends State<MaterializeHelmet> {
       );
 
       _applySettings();
-      _applyProgress(0);
-      if (mounted) setState(() => _ready = true);
+      applyProgress(0, 0);
     } catch (e, st) {
       debugPrint('Materialize failed: $e\n$st');
-      if (mounted) setState(() => _error = e);
+      rethrow;
     }
   }
 
@@ -253,8 +235,8 @@ class _MaterializeHelmetState extends State<MaterializeHelmet> {
     }
   }
 
-  void _applyProgress(double elapsedSeconds) {
-    final p = _progress.clamp(0.0, 1.0);
+  void applyProgress(double progress, double elapsedSeconds) {
+    final p = progress.clamp(0.0, 1.0);
     final eased = p * p * (3 - 2 * p);
     const pad = _Look.sweepPad + _Look.noiseAmp;
     const start = -pad;
@@ -267,7 +249,7 @@ class _MaterializeHelmetState extends State<MaterializeHelmet> {
       wireN - _Look.lagWireToGlass - _Look.lagGlassToSolid,
     );
     final center = vm.Vector3.copy(_center);
-    _spin.globalTransform.transform3(center);
+    spin.globalTransform.transform3(center);
     for (final (wire, _) in _wirePasses) {
       wire.parameters
         ..setFloat('wire_front', wireFront)
@@ -285,6 +267,35 @@ class _MaterializeHelmetState extends State<MaterializeHelmet> {
       shell.parameters.setFloat('solid_front', solidFront);
     }
   }
+}
+
+/// Starts loading the helmet demo; call once at app start.
+void preloadHelmet() => _Helmet.instance.ready.ignore();
+
+class _MaterializeHelmetState extends State<MaterializeHelmet> {
+  final _Helmet h = _Helmet.instance;
+  bool _ready = false;
+  Object? _error;
+
+  // Progress 0 (nothing) to 1 (solid): it starts building on the first frame.
+  double _progress = 0;
+  bool _exiting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    h.applyProgress(0, 0);
+    h.ready.then(
+      (_) => mounted ? setState(() => _ready = true) : null,
+      onError: (Object e) => mounted ? setState(() => _error = e) : null,
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _exiting = BuildStep.of(context) >= 1;
+  }
 
   void _tick(Duration elapsed, double dt) {
     final seconds = elapsed.inMicroseconds / 1e6;
@@ -296,14 +307,8 @@ class _MaterializeHelmetState extends State<MaterializeHelmet> {
     } else {
       _progress = math.min(1, _progress + dt / _Look.duration);
     }
-    _spin.localTransform = vm.Matrix4.rotationY(seconds * 0.25);
-    _applyProgress(seconds);
-  }
-
-  @override
-  void dispose() {
-    scene.removeAll();
-    super.dispose();
+    h.spin.localTransform = vm.Matrix4.rotationY(seconds * 0.25);
+    h.applyProgress(_progress, seconds);
   }
 
   @override
@@ -317,7 +322,7 @@ class _MaterializeHelmetState extends State<MaterializeHelmet> {
       );
     }
     if (!_ready) return const SizedBox.expand();
-    return SceneView(scene, camera: _camera, onTick: _tick);
+    return SceneView(h.scene, camera: h.camera, onTick: _tick);
   }
 }
 

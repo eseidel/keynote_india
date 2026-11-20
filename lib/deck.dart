@@ -12,6 +12,7 @@ class Slide {
     this.section,
     this.cover = false,
     this.builds = 0,
+    this.shatterOut = false,
   });
   final Widget body;
   final String notes;
@@ -22,6 +23,9 @@ class Slide {
 
   /// Extra clicks spent revealing parts of the slide before advancing.
   final int builds;
+
+  /// Leave this slide by shattering it like glass (see shatter.dart).
+  final bool shatterOut;
 }
 
 String img(String name) => 'assets/images/$name';
@@ -290,7 +294,7 @@ final List<Slide> deck = [
       child: MaterializeHelmet(),
     ),
     section: Section.flutter,
-    builds: 1, // click once to dissolve the helmet, again to advance
+    shatterOut: true, // the click away breaks the slide like glass
     notes: "This slide is Flutter: Flutter Scene's Materialize demo (fscene.dev), running live inside the deck on Flutter GPU and Impeller. Wireframe, then glass shards, then the full PBR surface. Gorgeous 3D, made easy. Plus serious Windows desktop apps. You can do so much with Flutter that you can't with other systems.",
   ),
   Slide(
