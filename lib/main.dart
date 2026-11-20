@@ -280,12 +280,14 @@ class SlideFrame extends StatelessWidget {
               : 'assets/images/bg_dark.png',
           fit: BoxFit.cover,
         ),
-        Positioned(
-          left: 25,
-          top: 46,
-          width: 36,
-          child: Image.asset('assets/images/logo.png'),
-        ),
+        // The corner bird, except where the slide shows the full logo.
+        if (!(slide.body is Cover && (slide.body as Cover).logo != null))
+          Positioned(
+            left: 25,
+            top: 46,
+            width: 36,
+            child: Image.asset('assets/images/logo.png'),
+          ),
         slide.body,
         if (!slide.cover) ...[
           Positioned(

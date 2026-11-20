@@ -129,7 +129,8 @@ class Cover extends StatelessWidget {
     final metrics = tp.computeLineMetrics().first;
     // The top of a lowercase letter: the baseline minus about half the ascent.
     final top = metrics.baseline - metrics.ascent * 0.47;
-    final perch = Offset((last.left + last.right) / 2, top);
+    // The far right of the letter: over the u's right stem.
+    final perch = Offset(last.right - (last.right - last.left) * 0.2, top);
     return Stack(
       clipBehavior: Clip.none,
       children: [
