@@ -147,6 +147,7 @@ class _StacksPainter extends CustomPainter {
 
   static const _h = 54.0; // block height
   static const _drop = 220.0; // how far a block falls into place
+  static const _floorOverhang = 60.0; // floor line past each side of the box
 
   // Timeline (ms): blocks land one course at a time across all stacks,
   // then the bad stacks wobble; the right one sheds its top block.
@@ -163,10 +164,11 @@ class _StacksPainter extends CustomPainter {
     final ms = t.value * totalMs;
     final floor = size.height - 6;
 
-    // The floor: a faint line the stacks stand on.
+    // The floor: a faint line the stacks stand on, a little wider than the
+    // box so the shed block lands on it.
     canvas.drawLine(
-      Offset(0, floor),
-      Offset(size.width, floor),
+      Offset(-_floorOverhang, floor),
+      Offset(size.width + _floorOverhang, floor),
       Paint()
         ..color = Colors.white.withValues(alpha: 0.10)
         ..strokeWidth = 2,
@@ -178,11 +180,18 @@ class _StacksPainter extends CustomPainter {
       // Walk up the stack: each block's base centre and angle in the world.
       var p = base;
       var a = 0.0;
+      var below = double.infinity; // width of what this block stands on
       for (final (i, b) in s.blocks.indexed) {
         // Static crookedness grows in as the stack wobbles, and the whole
         // stack's sway is shared out up its height so it bends.
-        a += b.tilt * _settleIn(ms) + angle / s.blocks.length;
-        p += _rot(Offset(b.dx, 0), a);
+        final r = b.tilt * _settleIn(ms) + angle / s.blocks.length;
+        // Tip about the edge it rests on (its own low corner, or the corner
+        // of the block below if it overhangs), so corners never sink into
+        // the block underneath.
+        final q = (b.dx + r.sign * b.w / 2).clamp(-below / 2, below / 2);
+        p += _rot(Offset(q, 0), a) + _rot(Offset(b.dx - q, 0), a + r);
+        a += r;
+        below = b.w;
         final top = i == s.blocks.length - 1;
         final color = s.colors[i % s.colors.length];
         if (top && s.drops && ms >= _shedAt) {
@@ -285,6 +294,14 @@ class _StacksPainter extends CustomPainter {
       final hop = math.sin(math.pi * (after / 220).clamp(0.0, 1.0)) * 14;
       p = land - Offset(0, hop);
     }
+    // Never let it pass through the floor: lift it so its lowest corner
+    // rests on the floor line (it then tips flat about that corner).
+    final c = math.cos(a), sn = math.sin(a);
+    final lowest = math.max(
+      (w / 2 * sn).abs(),
+      (w / 2 * sn).abs() - _h * c,
+    );
+    if (p.dy + lowest > floor) p = Offset(p.dx, floor - lowest);
     _paintBlock(canvas, p, a, w, _h, color);
   }
 
