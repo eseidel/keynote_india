@@ -14,6 +14,7 @@ import 'whimsy_drift.dart';
 import 'whimsy_future.dart';
 import 'whimsy_glitch.dart';
 import 'whimsy_halfmillion.dart';
+import 'whimsy_important.dart';
 import 'whimsy_intent.dart';
 import 'whimsy_learning.dart';
 import 'whimsy_nohands.dart';
@@ -508,7 +509,7 @@ final List<Slide> deck = [
     notes: 'Callback to the opening question. The three reasons, in a line you can take home: own two, pay 3x, two answers.',
   ),
   const Slide(
-    Statement('AI makes Flutter more important, not less', size: 65),
+    ImportantStatement(),
     section: Section.us,
     notes: 'Orders of magnitude more software is coming. Spend it on people, not on copies.',
   ),
