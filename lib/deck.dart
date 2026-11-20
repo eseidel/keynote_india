@@ -5,6 +5,7 @@ import 'materialize.dart';
 import 'whimsy_bird.dart';
 import 'whimsy_dash.dart';
 import 'whimsy_drift.dart';
+import 'whimsy_future.dart';
 import 'whimsy_glitch.dart';
 import 'whimsy_pixels.dart';
 import 'whimsy_tokens.dart';
@@ -492,7 +493,7 @@ final List<Slide> deck = [
     notes: 'Orders of magnitude more software is coming. Spend it on people, not on copies.',
   ),
   const Slide(
-    Statement('Let’s go build the future'),
+    FutureSkyline('Let’s go build the future'),
     section: Section.us,
     notes: "Enjoy this human conference. Learning is part of what you'll do today.",
   ),
