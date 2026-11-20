@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'layouts.dart';
 import 'materialize.dart';
+import 'whimsy_approaches.dart';
 import 'whimsy_bird.dart';
 import 'whimsy_dash.dart';
 import 'whimsy_drift.dart';
@@ -271,32 +272,41 @@ final List<Slide> deck = [
     notes: 'Three common approaches. One at a time.',
   ),
   const Slide(
-    ProsCons(
-      title: 'Share some logic',
-      examples: 'Kotlin Multiplatform, C++',
-      upside: 'Simple: stop copying that part',
-      downside: 'Two UIs, plus the API and coordination between them',
+    Approach(
+      ProsCons(
+        title: 'Share some logic',
+        examples: 'Kotlin Multiplatform, C++',
+        upside: 'Simple: stop copying that part',
+        downside: 'Two UIs, plus the API and coordination between them',
+      ),
+      diagram: ShareLogicDiagram(),
     ),
     section: Section.flutter,
     notes: 'Share business logic, keep native UIs. You stop copying that part, but you still own two apps and the seam between them.',
   ),
   const Slide(
-    ProsCons(
-      title: 'Orchestrate native widgets',
-      examples: 'React Native',
-      upside: 'Easy to adopt; great for brownfield',
-      downside:
-          'Complexity: behavior lives in systems you can’t test everywhere',
+    Approach(
+      ProsCons(
+        title: 'Orchestrate native widgets',
+        examples: 'React Native',
+        upside: 'Easy to adopt; great for brownfield',
+        downside:
+            'Complexity: behavior lives in systems you can’t test everywhere',
+      ),
+      diagram: PuppetDiagram(),
     ),
     section: Section.flutter,
     notes: "How does this button behave? It lives in a system you can't test from your Windows machine.",
   ),
   const Slide(
-    ProsCons(
-      title: 'Bring your whole stack',
-      examples: 'The web, Flutter, game engines',
-      upside: 'Most portability and control; test anywhere',
-      downside: 'You carry the stack',
+    Approach(
+      ProsCons(
+        title: 'Bring your whole stack',
+        examples: 'The web, Flutter, game engines',
+        upside: 'Most portability and control; test anywhere',
+        downside: 'You carry the stack',
+      ),
+      diagram: CarryStackDiagram(),
     ),
     section: Section.flutter,
     notes: 'Test and verify everything anywhere, even iOS from Linux. The cost: you carry the whole stack, so the stack had better be good.',
