@@ -321,9 +321,9 @@ final List<Slide> deck = [
     notes: "This slide is Flutter: Flutter Scene's Materialize demo (fscene.dev), running live inside the deck on Flutter GPU and Impeller. Wireframe, then glass shards, then the full PBR surface. Gorgeous 3D, made easy. Plus serious Windows desktop apps. You can do so much with Flutter that you can't with other systems.",
   ),
   const Slide(
-    SplitVisual(text: 'Good bones', visual: BrickFoundation()),
+    SplitVisual(text: 'Solid foundations', visual: BrickFoundation()),
     section: Section.flutter,
-    notes: 'Good bones are why it scales and why agents thrive on it. Scale: 1M+ apps on Play, nearly a third of new free iOS apps, millions of lines at Google, businesses in this city. Agents: one golden path; a fast loop (hot reload, hot restart, desktop with no emulator); they can see the app (widget, render and accessibility trees).',
+    notes: 'Solid foundations are why it scales and why agents thrive on it. Scale: 1M+ apps on Play, nearly a third of new free iOS apps, millions of lines at Google, businesses in this city. Agents: one golden path; a fast loop (hot reload, hot restart, desktop with no emulator); they can see the app (widget, render and accessibility trees).',
   ),
   const Slide(
     ListSlide(
