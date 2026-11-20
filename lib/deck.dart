@@ -4,6 +4,7 @@ import 'layouts.dart';
 import 'materialize.dart';
 import 'whimsy_drift.dart';
 import 'whimsy_glitch.dart';
+import 'whimsy_pixels.dart';
 import 'whimsy_tokens.dart';
 import 'whimsy_truth.dart';
 
@@ -309,7 +310,7 @@ final List<Slide> deck = [
     notes: "Flutter has been and remains the best portable software we have. Here's why, structurally.",
   ),
   const Slide(
-    Statement('You own every pixel'),
+    PixelStatement('You own every pixel'),
     section: Section.flutter,
     notes: 'One renderer, your code, top to bottom. The app looks and behaves the same everywhere, and you can test and verify all of it from one machine. No behavior hides in a system you can\'t see or test. Everything that follows comes from this.',
   ),
