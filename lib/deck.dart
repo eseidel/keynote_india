@@ -6,6 +6,7 @@ import 'whimsy_bird.dart';
 import 'whimsy_dash.dart';
 import 'whimsy_drift.dart';
 import 'whimsy_glitch.dart';
+import 'whimsy_learning.dart';
 import 'whimsy_pixels.dart';
 import 'whimsy_tokens.dart';
 import 'whimsy_truth.dart';
@@ -107,6 +108,7 @@ final List<Slide> deck = [
   const Slide(
     Verdicts(
       items: [(VerdictKind.good, 'Trivia'), (VerdictKind.bad, 'Learning')],
+      words: {1: ForgetfulWord('Learning')},
     ),
     section: Section.ai,
     notes: "Trained on every open-source RecyclerView there is; knows Android's insides better than any of us. But they don't learn: training data plus the context we give them, and they wake up fresh every time.",
