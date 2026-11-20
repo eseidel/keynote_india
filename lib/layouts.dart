@@ -220,7 +220,14 @@ class SplitImage extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(200, 40, 40, 40),
     child: Row(
       children: [
-        Expanded(flex: 5, child: Text(text, style: headline(size))),
+        Expanded(
+          flex: 5,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(text, style: headline(size)),
+          ),
+        ),
         const SizedBox(width: 60),
         Expanded(
           flex: 5,
@@ -754,7 +761,14 @@ class SplitVisual extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(200, 140, 160, 160),
     child: Row(
       children: [
-        Expanded(flex: 5, child: Text(text, style: headline(size))),
+        Expanded(
+          flex: 5,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(text, style: headline(size)),
+          ),
+        ),
         const SizedBox(width: 60),
         Expanded(flex: 6, child: visual),
       ],
