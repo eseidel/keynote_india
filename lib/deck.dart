@@ -6,6 +6,7 @@ import 'whimsy_bird.dart';
 import 'whimsy_dash.dart';
 import 'whimsy_drift.dart';
 import 'whimsy_glitch.dart';
+import 'whimsy_nohands.dart';
 import 'whimsy_pixels.dart';
 import 'whimsy_tokens.dart';
 import 'whimsy_truth.dart';
@@ -132,7 +133,7 @@ final List<Slide> deck = [
     notes: '20+ years, and most of the time agents code better than I do. Not true six months ago.',
   ),
   const Slide(
-    Statement('Producing code is no longer a human job'),
+    NoHandsStatement('Producing code is no longer a human job'),
     section: Section.ai,
     notes: '"Computer" used to be a job title. Those people became the first programmers.',
   ),
