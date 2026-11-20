@@ -61,7 +61,7 @@ class _NotReplaceStatementState extends State<NotReplaceStatement>
                   baseline: TextBaseline.alphabetic,
                   child: _Stamp(clock: _clock, style: style),
                 ),
-                const TextSpan(text: ' replace\nengineers'),
+                const TextSpan(text: ' replace engineers'),
               ],
             ),
             textAlign: TextAlign.center,
