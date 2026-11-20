@@ -13,6 +13,7 @@ import 'whimsy_developers.dart';
 import 'whimsy_drift.dart';
 import 'whimsy_future.dart';
 import 'whimsy_glitch.dart';
+import 'whimsy_halfmillion.dart';
 import 'whimsy_intent.dart';
 import 'whimsy_learning.dart';
 import 'whimsy_nohands.dart';
@@ -195,7 +196,7 @@ final List<Slide> deck = [
     notes: "SoFi cut 60% of its code moving to Flutter. Who wouldn't take 60% off their token bill, their CI bill?",
   ),
   const Slide(
-    Statement('Half a million lines.\nOne person.\nOne month.'),
+    HalfMillion('Half a million lines.\nOne person.\nOne month.'),
     section: Section.flutter,
     notes: "Six months ago a whole team at SoFi adding 500K lines a quarter was a lot. Now I do 500K a month, by myself. The point isn't me; it's the tools.",
   ),
