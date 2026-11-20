@@ -23,6 +23,7 @@ import 'whimsy_learning.dart';
 import 'whimsy_nohands.dart';
 import 'whimsy_notreplace.dart';
 import 'whimsy_pixels.dart';
+import 'whimsy_ribbon.dart';
 import 'whimsy_prompt.dart';
 import 'whimsy_scale.dart';
 import 'whimsy_sixty.dart';
@@ -157,7 +158,7 @@ final List<Slide> deck = [
     notes: "Not taste: responsibility. They aren't human and don't exist in the real world. Someone has to own the result.",
   ),
   const Slide(
-    Statement('It codes better than I do'),
+    RibbonStatement('It codes better than I do'),
     section: Section.ai,
     notes: '20+ years, and most of the time agents code better than I do. Not true six months ago.',
   ),
