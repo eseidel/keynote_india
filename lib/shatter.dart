@@ -8,6 +8,10 @@ import 'package:vector_math/vector_math.dart' as vm;
 /// A slide transition: a snapshot of the outgoing slide, cut into glass
 /// shards in a Flutter Scene, cracks outward from an impact point and blows
 /// toward the audience, revealing the next slide underneath.
+/// Freezes the shatter at this many seconds, for checking frames (set by
+/// the SNAP harness in main.dart); null runs on the real clock.
+final shatterClock = ValueNotifier<double?>(null);
+
 class ShatterOverlay extends StatefulWidget {
   const ShatterOverlay({super.key, required this.image, required this.onDone});
 
@@ -38,7 +42,15 @@ class _ShatterOverlayState extends State<ShatterOverlay> {
   // The glass pane is 16 x 9 world units, framed to fill the view exactly.
   static const w = 16.0, h = 9.0, cols = 18, rows = 10;
   static const fov = 30 * math.pi / 180;
-  static const duration = 2.3;
+  static const duration = 2.0;
+
+  /// Half of g, in world units (the pane is 9 tall) per second squared.
+  static const gravity = 8.0;
+
+  /// The black behind the glass fades over this window, so the next slide
+  /// comes up under the last falling shards.
+  static const revealStart = 1.2, revealEnd = 1.8;
+  final reveal = ValueNotifier<double>(0);
   static final impact = vm.Vector2(1.5, 0.6); // a little right of center
 
   @override
@@ -82,17 +94,21 @@ class _ShatterOverlayState extends State<ShatterOverlay> {
       final away = centroid - impact;
       final d = away.length;
       final out = d < 1e-3 ? vm.Vector2(0, 1) : away / d;
-      final burst = 0.6 + rng.nextDouble() * 1.2 + (1 - d / maxDist) * 2.5;
+      final near = math.max(0.0, 1 - d / maxDist);
+      final burst = 0.4 + rng.nextDouble() * 1.0 + near * 2.0;
       shards.add(
         _Shard(
           node,
           home,
-          (d / maxDist) * 0.45 + rng.nextDouble() * 0.06,
-          // Outward, up a little, and hard toward the camera (-Z).
+          // The crack runs out from the impact, so the far edges hold a
+          // beat longer and the title visibly breaks before it drops.
+          (d / maxDist) * 0.6 + rng.nextDouble() * 0.08,
+          // Outward, a small kick up, and toward the camera: hard near the
+          // impact, gently elsewhere, so most glass stays in view and falls.
           vm.Vector3(
             out.x * burst,
-            out.y * burst + 2,
-            -(6 + rng.nextDouble() * 12),
+            out.y * burst + 1,
+            -(0.5 + rng.nextDouble() * 2.5 + near * near * 9),
           ),
           vm.Vector3(
             rng.nextDouble() - 0.5,
@@ -129,8 +145,8 @@ class _ShatterOverlayState extends State<ShatterOverlay> {
     // first frame.
     final now = elapsed.inMicroseconds / 1e6;
     var t = now - (_t0 ??= now);
-    const freeze = String.fromEnvironment('SHATTER_T');
-    if (freeze.isNotEmpty) t = double.parse(freeze);
+    final frozen = shatterClock.value;
+    if (frozen != null) t = frozen;
     for (final s in shards) {
       final local = math.max(0.0, t - s.delay);
       // A hairline crack first: shards barely move for a beat.
@@ -139,12 +155,16 @@ class _ShatterOverlayState extends State<ShatterOverlay> {
       final pos =
           s.home +
           s.velocity * (crack * 0.15 + fly) +
-          vm.Vector3(0, -7 * fly * fly, 0);
+          vm.Vector3(0, -gravity * fly * fly, 0);
       final rot = vm.Quaternion.axisAngle(s.axis, s.spin * fly);
       // A fresh matrix per node: the setter keeps the reference.
       s.node.localTransform = vm.Matrix4.compose(pos, rot, vm.Vector3.all(1));
     }
-    if (t > duration && !done && freeze.isEmpty) {
+    reveal.value = ((t - revealStart) / (revealEnd - revealStart)).clamp(
+      0.0,
+      1.0,
+    );
+    if (t > duration && !done && frozen == null) {
       done = true;
       WidgetsBinding.instance.addPostFrameCallback((_) => widget.onDone());
     }
@@ -153,6 +173,7 @@ class _ShatterOverlayState extends State<ShatterOverlay> {
   @override
   void dispose() {
     scene.removeAll();
+    reveal.dispose();
     super.dispose();
   }
 
@@ -161,17 +182,24 @@ class _ShatterOverlayState extends State<ShatterOverlay> {
     // Until the shards are built, hold the outgoing slide on screen.
     if (!ready) return RawImage(image: widget.image, fit: BoxFit.fill);
     final d = (h / 2) / math.tan(fov / 2);
-    return ColoredBox(
-      color: Colors.black,
-      child: SceneView(
-        scene,
-        camera: PerspectiveCamera(
-          fovRadiansY: fov,
-          position: vm.Vector3(0, 0, -d),
-          target: vm.Vector3.zero(),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ValueListenableBuilder(
+          valueListenable: reveal,
+          builder: (_, r, _) =>
+              ColoredBox(color: Colors.black.withValues(alpha: 1 - r)),
         ),
-        onTick: _tick,
-      ),
+        SceneView(
+          scene,
+          camera: PerspectiveCamera(
+            fovRadiansY: fov,
+            position: vm.Vector3(0, 0, -d),
+            target: vm.Vector3.zero(),
+          ),
+          onTick: _tick,
+        ),
+      ],
     );
   }
 }
