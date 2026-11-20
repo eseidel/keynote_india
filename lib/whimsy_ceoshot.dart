@@ -22,7 +22,7 @@ class CeoShotSlide extends StatefulWidget {
 
 const _totalMs = 4200;
 const _said =
-    'Land #325 once CI is green, then walk me through the launch PRs.';
+    'Put some whimsy on every slide of my FlutterCon India keynote.';
 
 // The app window, in canvas pixels, before the tilt.
 const _win = Rect.fromLTWH(440, 215, 1150, 723);
