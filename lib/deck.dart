@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'layouts.dart';
 import 'materialize.dart';
+import 'whimsy_dash.dart';
 import 'whimsy_drift.dart';
 import 'whimsy_glitch.dart';
 import 'whimsy_pixels.dart';
@@ -317,11 +318,11 @@ final List<Slide> deck = [
   Slide(
     TitleOver(
       title: 'It goes everywhere',
-      child: Gallery(
+      child: HopGallery(
         items: [
-          (img('ev_desk.png'), 'Desktop'),
-          (img('ev_mob.png'), 'iOS and Android'),
-          (img('ev_car.jpg'), 'Cars'),
+          (img('ev_desk.png'), 'Desktop', const Offset(0.5, 0.166)),
+          (img('ev_mob.png'), 'iOS and Android', const Offset(0.716, 0.024)),
+          (img('ev_car.jpg'), 'Cars', const Offset(0.3, 0)),
         ],
       ),
     ),
