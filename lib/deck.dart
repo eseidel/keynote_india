@@ -488,7 +488,12 @@ final List<Slide> deck = [
     notes: 'Callback to the opening question. The three reasons, in a line you can take home: own two, pay 3x, two answers.',
   ),
   const Slide(
-    ImportantStatement(),
+    ImportantStatement(
+      lead: 'AI makes Flutter',
+      more: 'more important',
+      rest: 'not',
+      less: 'less',
+    ),
     section: Section.us,
     notes: 'Orders of magnitude more software is coming. Spend it on people, not on copies.',
   ),
