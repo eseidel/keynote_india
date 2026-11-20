@@ -112,27 +112,51 @@ class _SitePainter extends CustomPainter {
   }
 
   void _paintWall(Canvas canvas, double ms) {
-    final ghost = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.5
-      ..color = Palette.accent.withValues(alpha: 0.35);
     for (var course = 0; course < 4; course++) {
       for (var col = 0; col < _cols; col++) {
         final r = _slot(course, col);
-        final built = course < 2 || (course == 2 && col < _target.col);
-        if (built) {
+        if (_built(course, col)) {
           _block(canvas, r, _blues[(course + col) % _blues.length]);
-        } else {
-          // The plan: dashed outlines of what's still to build.
-          _dashed(
-            canvas,
-            RRect.fromRectAndRadius(r, const Radius.circular(6)),
-            ghost,
-          );
         }
       }
     }
+    // The plan: dashed outlines of what's still to build.
+    canvas.drawPath(_plan, _ghost);
   }
+
+  static bool _built(int course, int col) =>
+      course < 2 || (course == 2 && col < _target.col);
+
+  static final _ghost = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2.5
+    ..color = Palette.accent.withValues(alpha: 0.35);
+
+  // Every dash of every unbuilt slot, built once: the plan never changes.
+  static final Path _plan = () {
+    final plan = Path();
+    for (var course = 0; course < 4; course++) {
+      for (var col = 0; col < _cols; col++) {
+        if (_built(course, col)) continue;
+        final outline = Path()
+          ..addRRect(
+            RRect.fromRectAndRadius(
+              _slot(course, col),
+              const Radius.circular(6),
+            ),
+          );
+        for (final m in outline.computeMetrics()) {
+          for (var d = 0.0; d < m.length; d += 16) {
+            plan.addPath(
+              m.extractPath(d, math.min(d + 9, m.length)),
+              Offset.zero,
+            );
+          }
+        }
+      }
+    }
+    return plan;
+  }();
 
   void _paintCrane(Canvas canvas, double ms) {
     final steel = Paint()
@@ -150,8 +174,11 @@ class _SitePainter extends CustomPainter {
     canvas.drawLine(const Offset(l, _ground), const Offset(l, _jibY), steel);
     canvas.drawLine(const Offset(r, _ground), const Offset(r, _jibY), steel);
     for (var y = _ground; y > _jibY + 10; y -= 34) {
-      canvas.drawLine(Offset(l, y), Offset(r, y - 34), thin);
-      canvas.drawLine(Offset(l, y - 34), Offset(r, y - 34), thin);
+      // Stop at the jib's underside so the last diagonal doesn't poke
+      // through the truss.
+      final up = math.max(y - 34, _jibY);
+      canvas.drawLine(Offset(l, y), Offset(r, up), thin);
+      canvas.drawLine(Offset(l, up), Offset(r, up), thin);
     }
     // Footing.
     canvas.drawRect(
@@ -372,15 +399,6 @@ class _SitePainter extends CustomPainter {
     );
   }
 
-  static void _dashed(Canvas canvas, RRect rr, Paint paint) {
-    final path = Path()..addRRect(rr);
-    for (final m in path.computeMetrics()) {
-      for (var d = 0.0; d < m.length; d += 16) {
-        canvas.drawPath(m.extractPath(d, math.min(d + 9, m.length)), paint);
-      }
-    }
-  }
-
   @override
-  bool shouldRepaint(_SitePainter old) => true;
+  bool shouldRepaint(_SitePainter old) => old.t != t;
 }
