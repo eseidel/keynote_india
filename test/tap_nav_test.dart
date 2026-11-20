@@ -38,6 +38,8 @@ void main() {
     // The black bar above the slide on a portrait phone counts too.
     await probe.tap(300, y: 100);
     expect(probe.slide, i + 1);
+    await probe.tap(60, y: 100); // and its left third goes back
+    expect(probe.slide, i);
   });
 }
 
