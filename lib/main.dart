@@ -32,7 +32,7 @@ class KeynoteApp extends StatelessWidget {
 }
 
 /// Keys: → / space / PageDown next, ← / PageUp back, Home / End,
-/// N toggles speaker notes. Touch: the left third back, the rest next.
+/// N toggles speaker notes. Touch or pen: the left third back, the rest next.
 class Presenter extends StatefulWidget {
   const Presenter({super.key, this.initial = 0});
   final int initial;
@@ -42,7 +42,9 @@ class Presenter extends StatefulWidget {
 }
 
 class _PresenterState extends State<Presenter> {
-  late int index = const int.fromEnvironment('SLIDE', defaultValue: 1) - 1;
+  late int index = const bool.hasEnvironment('SLIDE')
+      ? const int.fromEnvironment('SLIDE') - 1
+      : widget.initial;
   int step = 0; // builds revealed on the current slide
   bool showNotes = false;
   final focus = FocusNode();
@@ -156,11 +158,11 @@ class _PresenterState extends State<Presenter> {
       ? setState(() => step--)
       : go(index - 1, atEnd: true);
 
-  /// A click advances. A touch on the left third of the screen goes back and
-  /// anywhere else advances: on a phone there are no arrow keys.
+  /// A mouse click advances. A touch or pen on the left third of the screen
+  /// goes back and anywhere else advances: a phone has no arrow keys.
   void _onTap(TapUpDetails d) {
     final width = context.size?.width ?? 0;
-    if (d.kind == ui.PointerDeviceKind.touch &&
+    if (d.kind != ui.PointerDeviceKind.mouse &&
         d.localPosition.dx < width / 3) {
       back();
     } else {
