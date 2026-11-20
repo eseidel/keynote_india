@@ -19,7 +19,7 @@ class PromptNative extends StatefulWidget {
   State<PromptNative> createState() => _PromptNativeState();
 }
 
-const _totalMs = 3800;
+const _totalMs = 4000;
 
 class _PromptNativeState extends State<PromptNative>
     with SingleTickerProviderStateMixin {
@@ -86,6 +86,10 @@ class _PhonesPainter extends CustomPainter {
   final Animation<double> clock;
   final _Labels labels;
 
+  // The scan line's horizontal gradient, per side: a phone is still while it
+  // prints (the slide-together starts well after), so it's built once.
+  final _scanPaints = <double, Paint>{};
+
   static const phone = Size(150, 300);
   static const apart = 270.0; // each phone's distance from center when two
   static const top = 680.0; // below the quote's descenders
@@ -101,7 +105,8 @@ class _PhonesPainter extends CustomPainter {
       final f = _seg(t, start, start + 0.35);
       if (f <= 0 || f >= 1) continue;
       final e = Curves.easeIn.transform(f);
-      final from = Offset(cx + side * 120, 600);
+      // From just under the quote's descenders (about y 612), not on them.
+      final from = Offset(cx + side * 120, 628);
       final to = Offset(cx + side * apart, top + 6);
       final p = Offset.lerp(from, to, e)!;
       final paint = Paint()..color = Palette.accent.withValues(alpha: 0.9);
@@ -115,7 +120,8 @@ class _PhonesPainter extends CustomPainter {
 
     // They glide together and become one.
     final merge = Curves.easeInOutCubic.transform(_seg(t, 2.3, 3.2));
-    final become = _seg(t, 3.0, 3.2); // contents swap to the merged app
+    // Contents swap to the merged app once the slide-together has landed.
+    final become = _seg(t, 3.2, 3.4);
     final labelAlpha = _seg(t, 1.4, 1.8) * (1 - _seg(t, 2.2, 2.5));
 
     for (final (side, kind, start) in [
@@ -157,17 +163,14 @@ class _PhonesPainter extends CustomPainter {
       }
       canvas.restore();
       if (print < 1) {
-        final glow = Paint()
-          ..shader =
-              LinearGradient(
-                colors: [
-                  Palette.accent.withValues(alpha: 0),
-                  Palette.accent.withValues(alpha: 0.9),
-                  Palette.accent.withValues(alpha: 0),
-                ],
-              ).createShader(
-                Rect.fromLTWH(rect.left - 20, scanY, rect.width + 40, 1),
-              );
+        final glow = _scanPaints[side] ??= Paint()
+          ..shader = LinearGradient(
+            colors: [
+              Palette.accent.withValues(alpha: 0),
+              Palette.accent.withValues(alpha: 0.9),
+              Palette.accent.withValues(alpha: 0),
+            ],
+          ).createShader(Rect.fromLTWH(rect.left - 20, 0, rect.width + 40, 1));
         canvas.drawRect(
           Rect.fromLTWH(rect.left - 20, scanY - 2, rect.width + 40, 4),
           glow,
@@ -187,7 +190,7 @@ class _PhonesPainter extends CustomPainter {
     }
 
     // A soft ring as the two become one.
-    final ring = _seg(t, 3.0, 3.7);
+    final ring = _seg(t, 3.2, 3.9);
     if (ring > 0 && ring < 1) {
       final r = RRect.fromRectAndRadius(
         Rect.fromLTWH(
@@ -207,6 +210,11 @@ class _PhonesPainter extends CustomPainter {
       );
     }
   }
+
+  static final _chevron = Path()
+    ..moveTo(-3, -5)
+    ..lineTo(2, 0)
+    ..lineTo(-3, 5);
 
   static const _frame = Color(0xFF273142);
   static const _bezel = Color(0xFF3A4658);
@@ -275,10 +283,7 @@ class _PhonesPainter extends CustomPainter {
           // Chevron.
           final c = Offset(s.right - 14, s.top + y + 8);
           canvas.drawPath(
-            Path()
-              ..moveTo(c.dx - 3, c.dy - 5)
-              ..lineTo(c.dx + 2, c.dy)
-              ..lineTo(c.dx - 3, c.dy + 5),
+            _chevron.shift(c),
             Paint()
               ..style = PaintingStyle.stroke
               ..strokeWidth = 2
@@ -352,8 +357,15 @@ class _PhonesPainter extends CustomPainter {
         );
         bar(w / 2 - 22, s.height - 9, 44, 3.5, Palette.soft); // gesture bar
       case _Kind.one:
-        // One app: its own look, the same on every phone.
-        bar(w / 2 - 20, 8, 40, 11, const Color(0xFF000000));
+        // One app: its own look, the same on every phone. A neutral phone
+        // (neither island nor punch-hole), with a faint accent-blue rim.
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(r, const Radius.circular(24)),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2.5
+            ..color = a(Palette.accent.withValues(alpha: 0.55)),
+        );
         bar(12, 34, 64, 12, Palette.text);
         canvas.drawCircle(
           Offset(s.right - 18, s.top + 40),
