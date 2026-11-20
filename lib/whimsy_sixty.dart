@@ -17,13 +17,16 @@ class SixtyStat extends StatefulWidget {
   State<SixtyStat> createState() => _SixtyStatState();
 }
 
-const _total = 3400; // ms
+/// The clock runs through the end of the landing pop, so the number comes
+/// back to rest at its normal size.
+final int _total = _landMs + _popMs; // ms
+const _popMs = 350;
 
 class _SixtyStatState extends State<SixtyStat>
     with SingleTickerProviderStateMixin {
   late final AnimationController _clock = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: _total),
+    duration: Duration(milliseconds: _total),
   )..forward();
 
   @override
@@ -41,9 +44,8 @@ class _SixtyStatState extends State<SixtyStat>
         final cut = _Listing.cutAt(ms);
         final percent = (60 * cut).round();
         // A small pop as the count lands.
-        final pop = ms < _landMs
-            ? 0.0
-            : math.sin(math.pi * ((ms - _landMs) / 350).clamp(0.0, 1.0));
+        final popT = (ms - _landMs) / _popMs;
+        final pop = popT <= 0 || popT >= 1 ? 0.0 : math.sin(math.pi * popT);
         return Row(
           mainAxisSize: MainAxisSize.min,
           children: [
