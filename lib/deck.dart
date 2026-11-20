@@ -19,6 +19,7 @@ import 'whimsy_important.dart';
 import 'whimsy_intent.dart';
 import 'whimsy_learning.dart';
 import 'whimsy_nohands.dart';
+import 'whimsy_notreplace.dart';
 import 'whimsy_pixels.dart';
 import 'whimsy_prompt.dart';
 import 'whimsy_scale.dart';
@@ -162,7 +163,7 @@ final List<Slide> deck = [
     notes: '"Computer" used to be a job title. Those people became the first programmers.',
   ),
   const Slide(
-    Statement('AI does not replace engineers'),
+    NotReplaceStatement(),
     section: Section.ai,
     notes: "Say it emphatically. I don't write code; I'm responsible for it. The need for engineers is growing.",
   ),
