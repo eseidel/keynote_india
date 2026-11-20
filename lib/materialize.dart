@@ -235,13 +235,28 @@ class _Helmet {
     }
   }
 
+  static const _pad = _Look.sweepPad + _Look.noiseAmp;
+  static const _start = -_pad;
+  static const _end = 1.0 + _Look.lagWireToGlass + _Look.lagGlassToSolid + _pad;
+  static double _eased(double p) => p * p * (3 - 2 * p);
+
+  /// The progress at which the wire front is just past the helmet's base.
+  /// The sweep starts a pad below the model and eases in, so from 0 the
+  /// first second or so draws nothing; the entrance starts here instead.
+  static final double entryProgress = () {
+    // 4% of the model's height up, so wire shows on the first frame.
+    const target = (0.04 - _start) / (_end - _start);
+    var lo = 0.0, hi = 1.0;
+    for (var i = 0; i < 30; i++) {
+      final mid = (lo + hi) / 2;
+      _eased(mid) < target ? lo = mid : hi = mid;
+    }
+    return lo;
+  }();
+
   void applyProgress(double progress, double elapsedSeconds) {
     final p = progress.clamp(0.0, 1.0);
-    final eased = p * p * (3 - 2 * p);
-    const pad = _Look.sweepPad + _Look.noiseAmp;
-    const start = -pad;
-    const end = 1.0 + _Look.lagWireToGlass + _Look.lagGlassToSolid + pad;
-    final wireN = start + eased * (end - start);
+    final wireN = _start + _eased(p) * (_end - _start);
     double front(double n) => _minH + n * _range;
     final wireFront = front(wireN);
     final glassFront = front(wireN - _Look.lagWireToGlass);
@@ -277,14 +292,16 @@ class _MaterializeHelmetState extends State<MaterializeHelmet> {
   bool _ready = false;
   Object? _error;
 
-  // Progress 0 (nothing) to 1 (solid): it starts building on the first frame.
-  double _progress = 0;
+  // Progress 0 (nothing) to 1 (solid). Arriving forward, it starts at the
+  // helmet's base so wire shows on the first frame; arriving backward onto
+  // the exit build, it starts at 0 (nothing).
+  double _progress = _Helmet.entryProgress;
   bool _exiting = false;
 
   @override
   void initState() {
     super.initState();
-    h.applyProgress(0, 0);
+    h.applyProgress(_progress, 0);
     h.ready.then(
       (_) => mounted ? setState(() => _ready = true) : null,
       onError: (Object e) => mounted ? setState(() => _error = e) : null,
@@ -294,8 +311,16 @@ class _MaterializeHelmetState extends State<MaterializeHelmet> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final wasExiting = _exiting;
     _exiting = BuildStep.of(context) >= 1;
+    if (_exiting && !_started) _progress = 0;
+    _started = true;
+    if (wasExiting && !_exiting && _progress < _Helmet.entryProgress) {
+      _progress = _Helmet.entryProgress;
+    }
   }
+
+  bool _started = false;
 
   void _tick(Duration elapsed, double dt) {
     final seconds = elapsed.inMicroseconds / 1e6;
