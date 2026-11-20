@@ -75,7 +75,7 @@ final List<Slide> deck = [
     notes: 'Thanks, Greg. Every tool is up in the air.',
   ),
   const Slide(
-    PromptBox('Why not prompt once and get two native apps?'),
+    PromptBox('“Why not prompt once and get two native apps?”'),
     notes: "The question going around online. It's wrong, and here's why.",
   ),
   Slide(
