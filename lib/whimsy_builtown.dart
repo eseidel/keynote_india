@@ -65,10 +65,14 @@ class _BuiltOwnSlideState extends State<BuiltOwnSlide>
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   for (final (i, app) in _apps.indexed)
-                    _Window(
-                      app: app,
-                      ms: ms - _firstWindow - i * _windowGap,
-                      seed: i,
+                    // Its own layer, so a window that has landed (and
+                    // rebuilds with the same values) doesn't repaint.
+                    RepaintBoundary(
+                      child: _Window(
+                        app: app,
+                        ms: ms - _firstWindow - i * _windowGap,
+                        seed: i,
+                      ),
                     ),
                 ],
               );
@@ -513,33 +517,44 @@ class _FunnelBar extends StatelessWidget {
         child: Text(name, style: _px(12, color: Palette.muted)),
       ),
       Expanded(
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: FractionallySizedBox(
-            widthFactor: math.max(0.08, fraction * grow),
-            child: Container(
-              height: 26,
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    _sales.withValues(alpha: won ? 1 : 0.55),
-                    _sales.withValues(alpha: won ? 0.85 : 0.35),
-                  ],
+        child: LayoutBuilder(
+          builder: (context, box) {
+            final label = '${(n * grow).round()}';
+            // Never narrower than its count label plus padding, so the
+            // number doesn't clip or wrap while the bar is still short.
+            final width = math.max(
+              box.maxWidth * math.max(0.08, fraction * grow),
+              label.length * 8.0 + 14,
+            );
+            return Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                width: width,
+                height: 26,
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      _sales.withValues(alpha: won ? 1 : 0.55),
+                      _sales.withValues(alpha: won ? 0.85 : 0.35),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                '${(n * grow).round()}',
-                style: _px(
-                  12,
-                  weight: 700,
-                  color: won ? Palette.background : Palette.text,
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  softWrap: false,
+                  style: _px(
+                    12,
+                    weight: 700,
+                    color: won ? Palette.background : Palette.text,
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     ],
