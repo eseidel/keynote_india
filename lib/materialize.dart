@@ -244,6 +244,7 @@ class _Helmet {
   /// The sweep starts a pad below the model and eases in, so from 0 the
   /// first second or so draws nothing; the entrance starts here instead.
   static final double entryProgress = () {
+    // 4% of the model's height up, so wire shows on the first frame.
     const target = (0.04 - _start) / (_end - _start);
     var lo = 0.0, hi = 1.0;
     for (var i = 0; i < 30; i++) {
@@ -291,7 +292,9 @@ class _MaterializeHelmetState extends State<MaterializeHelmet> {
   bool _ready = false;
   Object? _error;
 
-  // Progress 0 (nothing) to 1 (solid): it starts building on the first frame.
+  // Progress 0 (nothing) to 1 (solid). Arriving forward, it starts at the
+  // helmet's base so wire shows on the first frame; arriving backward onto
+  // the exit build, it starts at 0 (nothing).
   double _progress = _Helmet.entryProgress;
   bool _exiting = false;
 
@@ -308,8 +311,16 @@ class _MaterializeHelmetState extends State<MaterializeHelmet> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final wasExiting = _exiting;
     _exiting = BuildStep.of(context) >= 1;
+    if (_exiting && !_started) _progress = 0;
+    _started = true;
+    if (wasExiting && !_exiting && _progress < _Helmet.entryProgress) {
+      _progress = _Helmet.entryProgress;
+    }
   }
+
+  bool _started = false;
 
   void _tick(Duration elapsed, double dt) {
     final seconds = elapsed.inMicroseconds / 1e6;
