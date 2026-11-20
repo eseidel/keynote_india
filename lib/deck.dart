@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import 'layouts.dart';
 import 'materialize.dart';
+import 'whimsy_glitch.dart';
 
 enum Section { ai, flutter, us }
 
@@ -86,7 +87,10 @@ final List<Slide> deck = [
     notes: 'Not our first transition: PCs, the internet, mobile. "Mary had a little..." An expert at 3am, for pennies.',
   ),
   const Slide(
-    Statement('Expert one minute.\nWrong the next.\nEqually confident.'),
+    GlitchStatement(
+      'Expert one minute.\nWrong the next.\nEqually confident.',
+      wrong: 1,
+    ),
     section: Section.ai,
     notes: "What people call jagged intelligence. Amazing at some things, terrible at others, and it can't tell which is which.",
   ),
