@@ -19,7 +19,8 @@ class CambrianWall extends StatefulWidget {
   State<CambrianWall> createState() => _CambrianWallState();
 }
 
-const _totalMs = 3400;
+/// The last ghost blinks out at 3000ms (2350 + 650); stop ticking then.
+const _totalMs = 3000;
 
 /// When each real tile starts to spawn (ms).
 const _tileStarts = [250, 600, 950, 1300];
@@ -102,14 +103,24 @@ class _Spawn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (ms <= 0) return Opacity(opacity: 0, child: child);
-    if (ms >= _tileSpawnMs) return child;
+    // One tree shape for the whole life of the tile (identity values at
+    // rest), so the tile's Image is never unmounted mid-pop.
     double opacity;
     double scale;
-    if (ms < _flickerMs) {
+    double flash;
+    if (ms <= 0) {
+      opacity = 0;
+      scale = 0.9;
+      flash = 0;
+    } else if (ms >= _tileSpawnMs) {
+      opacity = 1;
+      scale = 1;
+      flash = 0;
+    } else if (ms < _flickerMs) {
       // Stuttering: a faint, slightly small tile blinking on and off.
       opacity = _flickerOn(seed + 100, ms) ? 0.55 : 0.08;
       scale = 0.9;
+      flash = 0.85;
     } else {
       final u = ((ms - _flickerMs) / (_tileSpawnMs - _flickerMs)).clamp(
         0.0,
@@ -117,20 +128,16 @@ class _Spawn extends StatelessWidget {
       );
       opacity = 1;
       scale = 0.9 + 0.1 * Curves.elasticOut.transform(u);
+      // The flash peaks as it pops and drains away.
+      flash = 0.85 * (1 - u) * (1 - u);
     }
-    // The flash peaks as it pops and drains away.
-    final pop = ((ms - _flickerMs) / (_tileSpawnMs - _flickerMs)).clamp(
-      0.0,
-      1.0,
-    );
-    final flash = ms < _flickerMs ? 0.85 : 0.85 * math.pow(1 - pop, 2);
     return Opacity(
       opacity: opacity,
       child: Transform.scale(
         scale: scale,
         child: ColorFiltered(
           colorFilter: ColorFilter.mode(
-            Palette.accent.withValues(alpha: flash.toDouble()),
+            Palette.accent.withValues(alpha: flash),
             BlendMode.srcATop,
           ),
           child: child,
