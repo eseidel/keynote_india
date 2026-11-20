@@ -41,7 +41,8 @@ class Checkout extends StatelessWidget {
 
 const _startMs = 350;
 const _typeMs = 2300; // the whole file, ~190 characters a second
-const _totalMs = 3200;
+const _recedeDelayMs = 200;
+const _recedeMs = 600;
 
 /// When (ms) each character of [_code] appears: steady but bursty, the way
 /// a model streams tokens, and deterministic so frames repeat.
@@ -59,11 +60,15 @@ final List<double> _charTimes = () {
   return [for (final g in gaps) t += g / sum * _typeMs];
 }();
 
+/// The clock runs until the editor has fully receded (the last thing to
+/// move), so it settles at its resting opacity rather than mid-fade.
+final int _totalMs = (_charTimes.last + _recedeDelayMs + _recedeMs).ceil();
+
 class _NoHandsStatementState extends State<NoHandsStatement>
     with SingleTickerProviderStateMixin {
   late final AnimationController _clock = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: _totalMs),
+    duration: Duration(milliseconds: _totalMs),
   )..forward();
 
   @override
@@ -142,7 +147,10 @@ class _Editor extends StatelessWidget {
     // Once saved, the editor steps back behind the headline.
     final recede = done
         ? Curves.easeInOut.transform(
-            ((ms - _charTimes.last - 200) / 600).clamp(0.0, 1.0),
+            ((ms - _charTimes.last - _recedeDelayMs) / _recedeMs).clamp(
+              0.0,
+              1.0,
+            ),
           )
         : 0.0;
     return Opacity(
@@ -263,7 +271,22 @@ class _Editor extends StatelessWidget {
   }
 
   /// A small Dart highlighter: comments, keywords, Types, annotations.
+  static final _token = RegExp(r'@?\w+|\W+');
+  static final _type = RegExp(r'^[A-Z]');
+  static final _indent = RegExp(r'^ +');
+
+  /// Zalando Sans is proportional, so a space is too narrow to read as
+  /// indentation; leading spaces get a fixed, editor-like width instead.
   static List<InlineSpan> _highlight(String line, TextStyle base) {
+    final lead = _indent.firstMatch(line)?[0]?.length ?? 0;
+    return [
+      if (lead > 0)
+        WidgetSpan(child: SizedBox(width: lead * base.fontSize! * 0.6)),
+      ..._highlightCode(line.substring(lead), base),
+    ];
+  }
+
+  static List<InlineSpan> _highlightCode(String line, TextStyle base) {
     final comment = line.indexOf('//');
     if (comment >= 0) {
       return [
@@ -278,14 +301,14 @@ class _Editor extends StatelessWidget {
       ];
     }
     final spans = <InlineSpan>[];
-    for (final m in RegExp(r'@?\w+|\W+').allMatches(line)) {
+    for (final m in _token.allMatches(line)) {
       final w = m[0]!;
       Color? color;
       if (_keywords.contains(w)) {
         color = const Color(0xFFC792EA);
       } else if (w.startsWith('@')) {
         color = Palette.warn;
-      } else if (RegExp(r'^[A-Z]').hasMatch(w)) {
+      } else if (_type.hasMatch(w)) {
         color = Palette.accent;
       }
       spans.add(
