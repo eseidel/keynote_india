@@ -4,6 +4,7 @@ import 'layouts.dart';
 import 'materialize.dart';
 import 'whimsy_bird.dart';
 import 'whimsy_dash.dart';
+import 'whimsy_developers.dart';
 import 'whimsy_drift.dart';
 import 'whimsy_glitch.dart';
 import 'whimsy_pixels.dart';
@@ -423,7 +424,7 @@ final List<Slide> deck = [
     notes: '10x, 100x, 1000x more software. Software has been eating the world for 20-30 years and will keep on. An insatiable appetite for software, and for people who own it.',
   ),
   const Slide(
-    Statement('A lot more developers'),
+    DevelopersSlide('A lot more developers'),
     section: Section.us,
     notes: "Most won't call themselves Flutter developers.",
   ),
