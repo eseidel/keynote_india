@@ -43,6 +43,9 @@ class _PresenterState extends State<Presenter> {
   @override
   void initState() {
     super.initState();
+    // Global handler: works whatever has focus (the Focus widget missed keys
+    // when the window opened without focus).
+    HardwareKeyboard.instance.addHandler(_onKey);
     // --dart-define=SNAP=/path.png captures the slide after a few seconds
     // and quits; used to check the live 3D slide without a human.
     const snap = String.fromEnvironment('SNAP');
@@ -70,6 +73,14 @@ class _PresenterState extends State<Presenter> {
       step < deck[index].builds ? setState(() => step++) : go(index + 1);
 
   void back() => step > 0 ? setState(() => step--) : go(index - 1, atEnd: true);
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    super.dispose();
+  }
+
+  bool _onKey(KeyEvent e) => onKey(focus, e) == KeyEventResult.handled;
 
   KeyEventResult onKey(FocusNode _, KeyEvent e) {
     if (e is! KeyDownEvent && e is! KeyRepeatEvent) {
@@ -103,7 +114,6 @@ class _PresenterState extends State<Presenter> {
       body: Focus(
         focusNode: focus,
         autofocus: true,
-        onKeyEvent: onKey,
         child: GestureDetector(
           onTap: next,
           child: Column(
