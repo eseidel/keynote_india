@@ -5,6 +5,7 @@ import 'materialize.dart';
 import 'whimsy_drift.dart';
 import 'whimsy_glitch.dart';
 import 'whimsy_tokens.dart';
+import 'whimsy_truth.dart';
 
 enum Section { ai, flutter, us }
 
@@ -219,7 +220,7 @@ final List<Slide> deck = [
     TitleOver(
       title: 'Single source of truth',
       size: 40,
-      child: Picture(img('g3f42c810597_1_5.png')),
+      child: const SingleSource(),
     ),
     section: Section.flutter,
     notes: 'Without one, every change is coordination: two agents to do the work, a third to keep them in sync.',
