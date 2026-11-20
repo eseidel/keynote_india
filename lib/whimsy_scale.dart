@@ -68,10 +68,14 @@ class _ScaleListState extends State<ScaleList>
             top: 30,
             bottom: 90,
             child: IgnorePointer(
-              child: CustomPaint(
-                painter: _AppField(
-                  _climb(t),
-                  ((t - countEnd) / 0.6).clamp(0.0, 1.0),
+              // Its own layer, so it stops repainting once the field is
+              // grown, while the items are still rising in over it.
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  painter: _AppField(
+                    _climb(t),
+                    ((t - countEnd) / 0.6).clamp(0.0, 1.0),
+                  ),
                 ),
               ),
             ),
@@ -140,16 +144,12 @@ class _ScaleListState extends State<ScaleList>
     final style = headline(widget.size);
     // Accent while racing, settling to the list's white.
     final settle = ((t - countEnd) / 0.3).clamp(0.0, 1.0);
+    // Same font features as the plain line it hands off to, so the final
+    // "1M+" lands exactly where the settled text draws it.
     final countStyle = style.copyWith(
       color: Color.lerp(Palette.accent, Palette.text, settle),
-      fontFeatures: const [FontFeature.tabularFigures()],
     );
-    final measure = TextPainter(
-      text: TextSpan(text: prefix, style: style),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    final prefixWidth = measure.width;
-    measure.dispose();
+    final prefixWidth = _prefixWidth ??= _measure(prefix, style);
     final shown = value >= target ? prefix : '${_compact(value)}+';
     return Stack(
       clipBehavior: Clip.none,
@@ -181,6 +181,18 @@ class _ScaleListState extends State<ScaleList>
         ),
       ],
     );
+  }
+
+  double? _prefixWidth;
+
+  static double _measure(String s, TextStyle style) {
+    final painter = TextPainter(
+      text: TextSpan(text: s, style: style),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return width;
   }
 
   static String _compact(int v) {
