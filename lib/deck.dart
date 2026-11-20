@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'layouts.dart';
 import 'materialize.dart';
 import 'whimsy_bird.dart';
+import 'whimsy_cambrian.dart';
 import 'whimsy_dash.dart';
 import 'whimsy_drift.dart';
 import 'whimsy_future.dart';
@@ -378,7 +379,7 @@ final List<Slide> deck = [
     notes: 'Built for humans to drive. Now agents drive, and everyone is trying something.',
   ),
   Slide(
-    LogoWall(
+    CambrianWall(
       items: [
         (img('wall_im0.png'), 'Exact'),
         (img('wall_im1.png'), 'DartNative'),
