@@ -92,10 +92,20 @@ final List<Slide> deck = [
   ),
   const Slide(
     Verdicts(
-      items: [(VerdictKind.good, 'Trivia'), (VerdictKind.bad, 'Determinism')],
+      items: [(VerdictKind.good, 'Trivia'), (VerdictKind.bad, 'Learning')],
     ),
     section: Section.ai,
-    notes: "Knows every detail of RecyclerView, so you don't have to. But same question three times, three answers: not a compiler. Another reason prompting once for two platforms is weak. (The model itself doesn't learn either; we do that for it with context.)",
+    notes: "Trained on every open-source RecyclerView there is; knows Android's insides better than any of us. But they don't learn: training data plus the context we give them, and they wake up fresh every time.",
+  ),
+  const Slide(
+    Verdicts(
+      items: [
+        (VerdictKind.good, 'Squishy inputs'),
+        (VerdictKind.bad, 'Determinism'),
+      ],
+    ),
+    section: Section.ai,
+    notes: "For my whole career we packaged data as XML or JSON so software could read it. Now squishy input is fine. The flip side: ask three times, get three answers. Not a compiler, and another reason prompting once for two platforms is weak.",
   ),
   const Slide(
     Verdicts(items: [(VerdictKind.bad, 'Responsibility')]),
@@ -239,13 +249,9 @@ final List<Slide> deck = [
     notes: "Easy to get into any stack now, so stacks are judged on end quality, agent fit and maintenance. The iOS lead who wouldn't leave Swift isn't the blocker anymore.",
   ),
   const Slide(
-    ListSlide(
-      title: 'Three approaches',
-      items: [
-        'Share some logic',
-        'Orchestrate native widgets',
-        'Bring your whole stack',
-      ],
+    SectionDivider(
+      eyebrow: 'Flutter',
+      title: 'Three approaches\nto cross-platform',
     ),
     section: Section.flutter,
     notes: 'Three common approaches. One at a time.',
@@ -393,6 +399,11 @@ final List<Slide> deck = [
     notes: "First thing in this section. Not the same as three months ago, or a year ago. We don't even have the words yet.",
   ),
   const Slide(
+    Statement('Our jobs changed.\nAnd stayed the same.'),
+    section: Section.us,
+    notes: 'Our job is still to deliver value to customers through technology. That core hasn\'t moved.',
+  ),
+  const Slide(
     Statement('A lot more software'),
     section: Section.us,
     notes: '10x, 100x, 1000x more software. Software has been eating the world for 20-30 years and will keep on. An insatiable appetite for software, and for people who own it.',
@@ -422,18 +433,12 @@ final List<Slide> deck = [
     notes: 'Ops, PM, sales. Almost all Flutter and Dart, no mandate.',
   ),
   const Slide(
-    Statement('What’s our job now?'),
-    section: Section.us,
-    notes:
-        'A not-so-quiet crisis. We own the technical outcomes. And we learn.',
-  ),
-  const Slide(
     Quote(
       text: 'In times of change, learners inherit the earth, while the learned find themselves beautifully equipped to deal with a world that no longer exists.',
       by: 'Eric Hoffer',
     ),
     section: Section.us,
-    notes: 'This conference\'s tagline is "Learning at scale."',
+    notes: 'In times of change, it\'s about learning. Managers and business owners: give your people time and space to learn, to play and to fail. This conference\'s tagline is "Learning at scale."',
   ),
   const Slide(
     Statement('Your skills still matter'),
