@@ -369,7 +369,7 @@ final List<Slide> deck = [
   ),
   Slide(
     TitleOver(
-      title: 'It goes everywhere',
+      title: 'Flutter goes everywhere',
       child: HopGallery(
         items: [
           (img('ev_desk.png'), 'Desktop', const Offset(0.5, 0.166)),

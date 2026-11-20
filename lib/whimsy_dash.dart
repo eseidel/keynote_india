@@ -5,7 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import 'theme.dart';
 
-/// "It goes everywhere": the three screens as a layered stage instead of a
+/// "Flutter goes everywhere": the three screens as a layered stage instead of a
 /// flat row. Desktop swings in from the left and Embedded from the right,
 /// each tilted in perspective with its outer edge leaning toward you and
 /// bleeding off the slide; the phones drop in front, on top, last. Each one
@@ -414,7 +414,8 @@ class _DashPainter extends CustomPainter {
         final rise = 55 + (a.dy - b.dy).abs() * 0.3;
         feet = Offset.lerp(a, b, u)! - Offset(0, rise * math.sin(math.pi * u));
         airborne = true;
-        tilt = -0.35 * math.cos(math.pi * u); // nose up, then down
+        // Nose up, then down, and level again at each end (no snap on landing).
+        tilt = -0.3 * math.sin(2 * math.pi * u);
         break;
       }
     }
@@ -427,7 +428,8 @@ class _DashPainter extends CustomPainter {
     canvas.save();
     canvas.translate(feet.dx, feet.dy);
     canvas.rotate(tilt);
-    canvas.scale(1.25 * (1 + 0.3 * squash), 1.25 * (1 - 0.3 * squash));
+    // A light squash: much more and Dash looks smeared.
+    canvas.scale(1.25 * (1 + 0.06 * squash), 1.25 * (1 - 0.06 * squash));
     _paintDash(canvas, wingUp: airborne && (v / 57).floor().isEven);
     canvas.restore();
   }
