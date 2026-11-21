@@ -10,9 +10,8 @@ import 'theme.dart';
 /// your code?"). Under the title, a crowd seen from the back of the hall,
 /// drawn by Flutter, sits under two sweeping stage lights. Hands go up across
 /// the room, eager ones first, a couple of people half-raise, think again,
-/// then commit. The first hand up belongs to a little robot in the crowd,
-/// the only one facing us: the agent raises both hands. Everyone waves a
-/// little, then holds still. Plays once and settles in under four seconds.
+/// then commit. The first hand up is an eager one in the third row, right
+/// of center. Everyone waves a little, then holds still. Plays once and settles in under four seconds.
 class ShowOfHands extends StatefulWidget {
   const ShowOfHands({super.key, required this.title, this.size = 40});
   final String title;
@@ -119,23 +118,35 @@ class _Crowd {
       }
       rows.add(people);
     }
-    // The robot takes a seat in the third row, right of center.
+    // The eager one sits in the third row, right of center: first hand up.
     final row = rows[2];
     var best = 0;
     for (var i = 0; i < row.length; i++) {
-      if ((row[i].x - _robotX).abs() < (row[best].x - _robotX).abs()) best = i;
+      if ((row[i].x - _eagerX).abs() < (row[best].x - _eagerX).abs()) best = i;
     }
-    robot = row.removeAt(best);
-    // The row in front keeps its hands out of the robot's face: raise the
+    final e = row[best];
+    eager = row[best] = _Person(
+      x: e.x,
+      r: e.r,
+      hy: e.hy,
+      skin: e.skin,
+      shirt: e.shirt,
+      hair: e.hair,
+      side: e.side,
+      up: 0.3,
+      lean: e.lean,
+      phase: e.phase,
+    );
+    // The row in front keeps its hands out of the eager one's way: raise the
     // arm on the far side, or, if that's still in the way, don't raise.
     final front = rows[3];
     for (var i = 0; i < front.length; i++) {
       final p = front[i];
       if (p.up == null) continue;
       double handX(double side) => p.x + side * (1.65 * p.r + p.lean);
-      bool blocks(double side) => (handX(side) - robot.x).abs() < 150;
+      bool blocks(double side) => (handX(side) - eager.x).abs() < 150;
       if (!blocks(p.side)) continue;
-      final away = p.x < robot.x ? -1.0 : 1.0;
+      final away = p.x < eager.x ? -1.0 : 1.0;
       front[i] = _Person(
         x: p.x,
         r: p.r,
@@ -151,7 +162,7 @@ class _Crowd {
       );
     }
     // Two people in the front rows who aren't sure yet, both clear of the
-    // robot (this runs after the clearance pass, so it can't be undone).
+    // eager one (this runs after the clearance pass, so it can't be undone).
     for (final (k, i) in [(2, 4), (3, 10)]) {
       final p = rows[k][i];
       rows[k][i] = _Person(
@@ -169,16 +180,16 @@ class _Crowd {
       );
     }
     assert(
-      rows[3][10].x - robot.x > 300,
-      'the front-row hesitant hand must stay clear of the robot',
+      rows[3][10].x - eager.x > 300,
+      'the front-row hesitant hand must stay clear of the eager one',
     );
   }
 
-  static const _robotX = 1290.0;
+  static const _eagerX = 1290.0;
   static const _hazeColor = Color(0xFF1E2636);
 
   final rows = <List<_Person>>[];
-  late final _Person robot; // where the robot sits (its seat's geometry)
+  late final _Person eager; // the eager one, first hand up
 
   static const _skins = [
     Color(0xFFE2B08C),
@@ -298,11 +309,10 @@ class _CrowdPainter extends CustomPainter {
     final t = clock.value * _total;
     _paintGlow(canvas);
     _paintBeams(canvas, t);
-    for (final (k, row) in crowd.rows.indexed) {
+    for (final row in crowd.rows) {
       for (final p in row) {
         _paintPerson(canvas, p, t);
       }
-      if (k == 2) _paintRobot(canvas, crowd.robot, t);
     }
   }
 
@@ -444,108 +454,6 @@ class _CrowdPainter extends CustomPainter {
           ..strokeWidth = 0.09 * r
           ..color = Palette.soft.withValues(alpha: 0.22),
       );
-  }
-
-  // The robot's hands start up at 0.3s and take 0.4s; its wave starts
-  // 0.45s after the start, as everyone else's does.
-  static const _robotUp = 0.3, _robotRise = 0.4;
-
-  static const _metal = Color(0xFF8C9EB8); // Palette.muted
-  static const _metalDark = Color(0xFF5A6B85);
-
-  void _paintRobot(Canvas canvas, _Person seat, double t) {
-    final r = seat.r * 1.05;
-    final x = seat.x, hy = seat.hy;
-    // Up first, both arms, and it waves the hardest.
-    final u = Curves.easeOutBack.transform(
-      _clamp01((t - _robotUp) / _robotRise),
-    );
-    for (final side in [-1.0, 1.0]) {
-      _paintArm(
-        canvas,
-        Offset(x + side * 1.15 * r, hy + 1.6 * r),
-        side,
-        r,
-        u,
-        0.2 * r,
-        _wave(_robotUp + 0.45, 0, t, 0.35, 2.2) * side,
-        _metalDark,
-        _metal,
-      );
-    }
-    // Body: a boxy torso with a little status light.
-    canvas.drawRRect(
-      RRect.fromLTRBR(
-        x - 1.6 * r,
-        hy + 0.9 * r,
-        x + 1.6 * r,
-        hy + 8 * r,
-        Radius.circular(0.5 * r),
-      ),
-      Paint()..color = _metalDark,
-    );
-    // Antenna, with a bulb that blinks while it waves, then glows steady.
-    final blink = t < 3.0
-        ? (math.sin(t * 2 * math.pi * 2.5) > 0 ? 1.0 : 0.35)
-        : 1.0;
-    canvas
-      ..drawLine(
-        Offset(x, hy - 1.0 * r),
-        Offset(x, hy - 1.7 * r),
-        Paint()
-          ..color = _metal
-          ..strokeWidth = 0.12 * r,
-      )
-      ..drawCircle(
-        Offset(x, hy - 1.75 * r),
-        0.5 * r,
-        Paint()..color = Palette.warn.withValues(alpha: 0.25 * blink),
-      )
-      ..drawCircle(
-        Offset(x, hy - 1.75 * r),
-        0.2 * r,
-        Paint()..color = Palette.warn.withValues(alpha: blink),
-      );
-    // Head: the one face in the room, turned round to look at us.
-    final head = RRect.fromRectAndRadius(
-      Rect.fromCenter(center: Offset(x, hy), width: 2.3 * r, height: 2.0 * r),
-      Radius.circular(0.55 * r),
-    );
-    canvas
-      ..drawRRect(head, Paint()..color = _metal)
-      ..drawRRect(head.deflate(0.28 * r), Paint()..color = Palette.background);
-    // Eyes, with one blink after the wave.
-    final shut = math.sin(_clamp01((t - 3.1) / 0.22) * math.pi);
-    final eye = Paint()..color = Palette.accent;
-    for (final ex in [-0.42, 0.42]) {
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromCenter(
-            center: Offset(x + ex * r, hy - 0.1 * r),
-            width: 0.32 * r,
-            height: 0.42 * r * (1 - 0.85 * shut),
-          ),
-          Radius.circular(0.16 * r),
-        ),
-        eye,
-      );
-    }
-    // And a smile.
-    canvas.drawArc(
-      Rect.fromCenter(
-        center: Offset(x, hy + 0.12 * r),
-        width: 0.8 * r,
-        height: 0.5 * r,
-      ),
-      0.2,
-      math.pi - 0.4,
-      false,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeWidth = 0.1 * r
-        ..color = Palette.accent,
-    );
   }
 
   @override
