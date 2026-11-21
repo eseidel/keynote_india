@@ -8,8 +8,9 @@ import 'theme.dart';
 /// "“Just prompt native”": the prompt goes out and two native apps print
 /// themselves under the quote, scan line by scan line: an iOS one (Dynamic
 /// Island, large title, tab bar) and an Android one (punch-hole, app bar,
-/// cards, FAB). They lean in toward each other, bonk, and spring back:
-/// two apps, and they stay separate. A shrug pops up between them. The
+/// cards, FAB), side by side and apart: the proposal, as people put it.
+/// Then a big question mark drops in between them, wobbles and settles,
+/// over "WHY NOT?": the slide asks the question the talk answers. The
 /// quote itself is the plain statement throughout.
 class PromptNative extends StatefulWidget {
   const PromptNative(this.text, {super.key});
@@ -19,7 +20,7 @@ class PromptNative extends StatefulWidget {
   State<PromptNative> createState() => _PromptNativeState();
 }
 
-const _totalMs = 4200;
+const _totalMs = 3400;
 
 class _PromptNativeState extends State<PromptNative>
     with SingleTickerProviderStateMixin {
@@ -72,11 +73,10 @@ class _Labels {
     )..layout();
   }
 
-  late final TextPainter shrug = TextPainter(
-    text: TextSpan(
-      text: '🤷',
-      style: TextStyle(fontSize: pt(60)),
-    ),
+  /// The big question mark, laid out once; it's scaled with the canvas,
+  /// never by font size (Impeller's glyph atlas).
+  late final TextPainter question = TextPainter(
+    text: TextSpan(text: '?', style: headline(100, color: Palette.accent)),
     textDirection: TextDirection.ltr,
   )..layout();
 
@@ -84,6 +84,7 @@ class _Labels {
     for (final p in _cache.values) {
       p.dispose();
     }
+    question.dispose();
   }
 }
 
@@ -121,10 +122,6 @@ class _PhonesPainter extends CustomPainter {
       );
     }
 
-    // They lean in toward each other, bonk, and spring back apart.
-    final approach = Curves.easeIn.transform(_seg(t, 2.0, 2.4));
-    final recoil = const ElasticOutCurve(0.4).transform(_seg(t, 2.4, 3.4));
-    final nudge = 70 * approach * (1 - recoil);
     final labelAlpha = _seg(t, 1.4, 1.8);
 
     for (final (side, kind, start) in [
@@ -133,19 +130,13 @@ class _PhonesPainter extends CustomPainter {
     ]) {
       final print = _seg(t, start, start + 0.8);
       if (print <= 0) continue;
-      // A slight lean in toward each other as they slide, upright on arrival.
-      final x = cx + side * (apart - nudge);
-      final lean = -side * 0.08 * nudge / 70;
+      final x = cx + side * apart;
       final rect = Rect.fromLTWH(
         x - phone.width / 2,
         top,
         phone.width,
         phone.height,
       );
-      canvas.save();
-      canvas.translate(rect.center.dx, rect.bottom);
-      canvas.rotate(lean);
-      canvas.translate(-rect.center.dx, -rect.bottom);
       // Printing: revealed top-down behind a glowing scan line.
       final scanY =
           rect.top + (rect.height + 8) * Curves.easeInOut.transform(print);
@@ -172,7 +163,6 @@ class _PhonesPainter extends CustomPainter {
           glow,
         );
       }
-      canvas.restore();
 
       if (labelAlpha > 0) {
         final label = labels.get(
@@ -185,69 +175,23 @@ class _PhonesPainter extends CustomPainter {
       }
     }
 
-    // A shrug between them, popping up after the bonk.
-    final shrug = _seg(t, 2.9, 3.5);
-    if (shrug > 0) {
-      final pop = const ElasticOutCurve(0.5).transform(shrug);
-      final c = Offset(cx, top + phone.height * 0.42);
+    // The question: a big "?" drops in between them, wobbles on its
+    // dot and settles, then "WHY NOT?" fades in under it.
+    final drop = _seg(t, 1.9, 2.4);
+    if (drop > 0) {
+      final q = labels.question;
+      final pop = const ElasticOutCurve(0.55).transform(drop);
+      final s = math.max(0.0, t - 2.1);
+      final wobble = 0.22 * math.exp(-s * 3) * math.sin(s * 11);
+      final dot = Offset(cx, top + phone.height * 0.5 + q.height * 0.3);
       canvas.save();
-      canvas.translate(c.dx, c.dy);
+      canvas.translate(dot.dx, dot.dy);
+      canvas.rotate(wobble);
       canvas.scale(pop);
-      // Shoulders go up with the pop, then settle a touch.
-      _shrug(canvas, 1 - 0.3 * _seg(t, 3.5, 3.9));
+      q.paint(canvas, Offset(-q.width / 2, -q.height * 0.82));
       canvas.restore();
-      final cap = labels.get('STAY SEPARATE', _seg(t, 3.2, 3.6));
-      cap.paint(canvas, Offset(cx - cap.width / 2, c.dy + 70));
-    }
-  }
-
-  /// A hand-drawn shrugging person, centered on the origin, ~130 px wide:
-  /// round head with closed happy eyes, shoulders up, forearms out and
-  /// palms up. [lift] raises the shoulders (1 at the top of the shrug).
-  static void _shrug(Canvas canvas, double lift) {
-    final ink = Paint()
-      ..color = Palette.soft
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 5
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final up = 10 * lift;
-    // Head.
-    canvas.drawCircle(const Offset(0, -24), 22, ink);
-    // Closed eyes, like ^ ^, and a little smile.
-    for (final x in [-8.0, 8.0]) {
-      canvas.drawPath(
-        Path()
-          ..moveTo(x - 5, -24)
-          ..quadraticBezierTo(x, -31, x + 5, -24),
-        ink..strokeWidth = 3.5,
-      );
-    }
-    canvas.drawArc(
-      Rect.fromCircle(center: const Offset(0, -20), radius: 8),
-      0.4,
-      math.pi - 0.8,
-      false,
-      ink,
-    );
-    ink.strokeWidth = 5;
-    // Body.
-    canvas.drawLine(const Offset(0, -2), const Offset(0, 40), ink);
-    // Arms: shoulder up, elbow out and down, forearm up, palm flat.
-    for (final side in [-1.0, 1.0]) {
-      final shoulder = Offset(side * 6, 8 - up);
-      final elbow = Offset(side * 34, 22 - up * 0.4);
-      final hand = Offset(side * 58, 2 - up);
-      canvas.drawPath(
-        Path()
-          ..moveTo(0, 4)
-          ..lineTo(shoulder.dx, shoulder.dy)
-          ..quadraticBezierTo(side * 20, 8 - up, elbow.dx, elbow.dy)
-          ..lineTo(hand.dx, hand.dy)
-          // Palm up.
-          ..relativeLineTo(side * 10, -2),
-        ink,
-      );
+      final cap = labels.get('WHY NOT?', _seg(t, 2.5, 2.9));
+      cap.paint(canvas, Offset(cx - cap.width / 2, top + phone.height + 4));
     }
   }
 
