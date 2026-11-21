@@ -348,7 +348,7 @@ class _CrowdPainter extends CustomPainter {
     Rect.fromLTRB(-0.17, -0.77, 0.17, -0.43), // head
     Rect.fromLTRB(-0.1768, -0.7768, 0.1768, -0.4232), // hair cap
     Rect.fromLTRB(-0.22, -0.24, 0.22, 0.08), // laptop lid, at the chest
-    Rect.fromLTRB(-0.045, -0.125, 0.045, -0.035), // the lid's logo
+    Rect.fromLTRB(-0.06, -0.155, 0.06, 0.0), // the lid's Flutter logo
     Rect.fromLTRB(-0.27, 0.06, 0.27, 0.12), // the keyboard half, edge on
   ];
 
@@ -423,7 +423,25 @@ class _CrowdPainter extends CustomPainter {
               white,
             );
           case 4:
-            c.drawCircle(Offset(0, -h * 0.08), h * 0.045, white);
+            // The Flutter logo's three beams, from its SVG (146 x 181).
+            c.save();
+            c.translate(-h * 0.06, -h * 0.155);
+            c.scale(h * 0.12 / 146);
+            c.translate(-9.8, -10.4);
+            for (final beam in [
+              [37.7, 128.9, 9.8, 101.0, 100.4, 10.4, 156.2, 10.4],
+              [156.2, 94.0, 100.4, 94.0, 51.6, 142.8, 79.5, 170.7],
+              [79.5, 170.7, 100.4, 191.6, 156.2, 191.6, 107.4, 142.8],
+            ]) {
+              c.drawPath(
+                Path()..addPolygon([
+                  for (var k = 0; k < beam.length; k += 2)
+                    Offset(beam[k], beam[k + 1]),
+                ], true),
+                white,
+              );
+            }
+            c.restore();
           case 5:
             c.drawRRect(
               RRect.fromLTRBR(

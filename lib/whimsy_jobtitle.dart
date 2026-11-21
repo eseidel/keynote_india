@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -5,11 +6,11 @@ import 'package:flutter/material.dart';
 import 'theme.dart';
 
 /// "The engineer's job changed": under the line, a split-flap nameplate
-/// reads JOB TITLE: ENGINEER. Then it starts clattering. Every flap flips
-/// through letters and odd glyphs, slowing down, as if it's hunting for the
-/// new word, but it never finds one: the flaps run out to blank one by one,
-/// and the last one lands on a "?". We don't have the words yet. Runs once,
-/// settles in about three and a half seconds.
+/// reads JOB TITLE: ENGINEER. Then it starts clattering, hunting for the
+/// new word, and tries one on: WIZARD. It holds a beat, then clatters on
+/// to the next: ARCHITECT, CONDUCTOR, INVENTOR... and round again for as
+/// long as the slide is up. We don't have the word yet, but they're all
+/// good ones.
 class JobTitleStatement extends StatefulWidget {
   const JobTitleStatement(this.text, {super.key, this.size = 50});
   final String text;
@@ -19,24 +20,64 @@ class JobTitleStatement extends StatefulWidget {
   State<JobTitleStatement> createState() => _JobTitleStatementState();
 }
 
-const _totalMs = 3800;
 const _cells = 9;
-const _start = 'ENGINEER '; // one char per cell
-const _askCell = 4; // the one that ends on '?'
+
+/// The board's words, in order. After the last it goes round again from
+/// the second (the first is where it starts, and the last repeats the
+/// second, so the wrap is seamless).
+const _words = [
+  'ENGINEER',
+  'WIZARD',
+  'ARCHITECT',
+  'CONDUCTOR',
+  'INVENTOR',
+  'MAESTRO',
+  'CAPTAIN',
+  'CREATOR',
+  'WIZARD',
+];
+const _introMs = 900.0; // ENGINEER, before the first clatter
+const _clatterMs = 1250.0; // from a leg's start until every cell has landed
+const _holdMs = 1300.0; // each word, on show
 const _cellW = 84.0, _cellH = 116.0, _gap = 10.0;
 const _boardW = _cells * _cellW + (_cells - 1) * _gap;
 
 class _JobTitleStatementState extends State<JobTitleStatement>
     with SingleTickerProviderStateMixin {
+  final _Flaps _flaps = _Flaps();
   late final AnimationController _clock = AnimationController(
     vsync: this,
-    duration: const Duration(milliseconds: _totalMs),
-  )..forward();
+    duration: Duration(milliseconds: _flaps.totalMs.ceil()),
+  );
+  Timer? _hold;
+  int _word = 1; // the word the board is heading for
 
-  final _Flaps _flaps = _Flaps();
+  @override
+  void initState() {
+    super.initState();
+    _go();
+  }
+
+  /// Clatter to [_word], hold it, then on to the next.
+  void _go() {
+    _clock.animateTo(_flaps.landedAt(_word) / _flaps.totalMs).then((_) {
+      if (!mounted) return;
+      _hold = Timer(Duration(milliseconds: _holdMs.round()), () {
+        if (!mounted) return;
+        if (_word == _words.length - 1) {
+          // The last word repeats the second: jump back to it, unseen.
+          _word = 1;
+          _clock.value = _flaps.landedAt(1) / _flaps.totalMs;
+        }
+        _word++;
+        _go();
+      });
+    });
+  }
 
   @override
   void dispose() {
+    _hold?.cancel();
     _clock.dispose();
     _flaps.dispose();
     super.dispose();
@@ -66,7 +107,7 @@ class _JobTitleStatementState extends State<JobTitleStatement>
           const SizedBox(height: 16),
           CustomPaint(
             size: const Size(_boardW, _cellH),
-            painter: _BoardPainter(_clock, _flaps),
+            painter: _BoardPainter(_clock, _flaps, _flaps.totalMs),
           ),
         ],
       ),
@@ -87,59 +128,69 @@ class _Track {
 class _Flaps {
   _Flaps() {
     final style = headline(27);
-    final accent = headline(27, color: Palette.accent);
     for (final ch in _alphabet.split('')) {
       glyphs[ch] = TextPainter(
         text: TextSpan(text: ch, style: style),
         textDirection: TextDirection.ltr,
       )..layout();
     }
-    ask = TextPainter(
-      text: TextSpan(text: '?', style: accent),
-      textDirection: TextDirection.ltr,
-    )..layout();
     final m = glyphs['E']!.computeLineMetrics().first;
     baseline = m.baseline;
     capHeight = m.ascent * 0.72;
 
     final r = math.Random(50);
-    // Blanks land in pairs from the outside in, a beat apart within each
-    // pair; the '?' cell lands last.
-    const landOrder = [0, 8, 1, 7, 2, 6, 3, 5, 4];
+    String cellOf(String word, int i) {
+      final left = (_cells - word.length) ~/ 2;
+      final j = i - left;
+      return j >= 0 && j < word.length ? word[j] : ' ';
+    }
+
+    final chars = [
+      for (var i = 0; i < _cells; i++) [cellOf(_words.first, i)],
+    ];
+    final starts = [for (var i = 0; i < _cells; i++) <double>[]];
+    final durs = [for (var i = 0; i < _cells; i++) <double>[]];
+    var legStart = _introMs;
+    for (var w = 1; w < _words.length; w++) {
+      var landed = legStart;
+      for (var i = 0; i < _cells; i++) {
+        final target = cellOf(_words[w], i);
+        // A cell with nothing to change still clatters a little, now and
+        // then, like a real board settling; most just flip their way there.
+        final flips = target == chars[i].last && r.nextBool()
+            ? 0
+            : 5 + r.nextInt(4);
+        if (flips == 0) continue;
+        for (var j = 0; j < flips - 1; j++) {
+          String c;
+          do {
+            c = _alphabet[r.nextInt(_alphabet.length)];
+          } while (c == chars[i].last || c == target);
+          chars[i].add(c);
+        }
+        chars[i].add(target);
+        // Quick clatter that slows toward the end, landing left to right.
+        final gaps = [
+          for (var j = 0; j < flips; j++) 60 + 140 * math.pow(j / flips, 3),
+        ];
+        final start = legStart + r.nextDouble() * 60;
+        final land = legStart + 620 + i * 55 + r.nextDouble() * 40;
+        final raw = gaps.fold(0.0, (a, b) => a + b);
+        final stretch = (land - start) / raw;
+        var at = start;
+        for (final g in gaps) {
+          starts[i].add(at);
+          durs[i].add(math.min(g * stretch * 0.92, 150.0));
+          at += g * stretch;
+        }
+        landed = math.max(landed, at);
+      }
+      _landed.add(landed);
+      legStart += _clatterMs + _holdMs;
+    }
+    totalMs = _landed.last;
     for (var i = 0; i < _cells; i++) {
-      final rank = landOrder.indexOf(i);
-      final flips = i == _askCell ? 18 : 13 + r.nextInt(3);
-      final chars = <String>[_start[i]];
-      for (var j = 0; j < flips - 1; j++) {
-        String c;
-        do {
-          c = _alphabet[r.nextInt(_alphabet.length)];
-        } while (c == chars.last);
-        chars.add(c);
-      }
-      chars.add(i == _askCell ? '?' : ' ');
-      // Quick clatter that slows down toward the end, like a real board
-      // running out of momentum, stretched so the cell lands on its beat.
-      final gaps = [
-        for (var j = 0; j < flips; j++)
-          62 +
-              150 * math.pow(j / flips, 3) +
-              (i == _askCell ? 90 * math.pow(j / flips, 2) : 0),
-      ];
-      final start = 520.0 + r.nextDouble() * 40;
-      final land = 1750.0 + (rank ~/ 2) * 230 + (rank.isOdd ? 70 : 0);
-      final raw =
-          gaps.take(flips - 1).fold(0.0, (a, b) => a + b) + gaps.last * 0.92;
-      final stretch = (land - start) / raw;
-      final starts = <double>[];
-      final durs = <double>[];
-      var at = start;
-      for (final g in gaps) {
-        starts.add(at);
-        durs.add(math.min(g * stretch * 0.92, 150.0));
-        at += g * stretch;
-      }
-      tracks.add(_Track(chars, starts, durs));
+      tracks.add(_Track(chars[i], starts[i], durs[i]));
     }
   }
 
@@ -147,27 +198,26 @@ class _Flaps {
   static const _alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ#&%*@';
 
   final glyphs = <String, TextPainter>{};
-  late final TextPainter ask;
   late final double baseline, capHeight;
   final tracks = <_Track>[];
+  final _landed = <double>[_introMs]; // when each word is fully showing
+  late final double totalMs;
 
-  double get endMs {
-    final t = tracks[_askCell];
-    return t.starts.last + t.durs.last;
-  }
+  /// When word [w] has fully landed (ms).
+  double landedAt(int w) => _landed[w];
 
   void dispose() {
     for (final g in glyphs.values) {
       g.dispose();
     }
-    ask.dispose();
   }
 }
 
 class _BoardPainter extends CustomPainter {
-  _BoardPainter(this.t, this.f) : super(repaint: t);
+  _BoardPainter(this.t, this.f, this.totalMs) : super(repaint: t);
   final Animation<double> t;
   final _Flaps f;
+  final double totalMs;
 
   static const _top = Color(0xFF1F2733);
   static const _bottom = Color(0xFF19202A);
@@ -175,7 +225,7 @@ class _BoardPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final ms = t.value * _totalMs;
+    final ms = t.value * totalMs;
     // The housing behind the flaps.
     canvas.drawRRect(
       RRect.fromRectAndRadius(
@@ -185,11 +235,11 @@ class _BoardPainter extends CustomPainter {
       Paint()..color = const Color(0xFF0A0D12),
     );
     for (var i = 0; i < _cells; i++) {
-      _cell(canvas, Offset(i * (_cellW + _gap), 0), f.tracks[i], ms, i);
+      _cell(canvas, Offset(i * (_cellW + _gap), 0), f.tracks[i], ms);
     }
   }
 
-  void _cell(Canvas canvas, Offset o, _Track tr, double ms, int i) {
+  void _cell(Canvas canvas, Offset o, _Track tr, double ms) {
     // Which flip is under way (or last finished).
     var k = 0; // chars[k] is fully showing, or flipping away
     var p = 1.0; // progress of the flip from chars[k-1] to chars[k]
@@ -204,7 +254,6 @@ class _BoardPainter extends CustomPainter {
     final hinge = rect.center.dy;
     final topHalf = Rect.fromLTRB(rect.left, rect.top, rect.right, hinge);
     final botHalf = Rect.fromLTRB(rect.left, hinge, rect.right, rect.bottom);
-    final landed = i == _askCell && k == tr.chars.length - 1 && p >= 1;
 
     // Behind the flap: new char on top, old char below until the flap
     // passes halfway.
@@ -242,20 +291,6 @@ class _BoardPainter extends CustomPainter {
     final pin = Paint()..color = const Color(0xFF3A4452);
     canvas.drawRect(Rect.fromLTWH(rect.left - 2, hinge - 5, 4, 10), pin);
     canvas.drawRect(Rect.fromLTWH(rect.right - 2, hinge - 5, 4, 10), pin);
-
-    // A ring pulses out from the '?' cell as it lands, and fades.
-    if (landed) {
-      final ring = ((ms - f.endMs) / 700).clamp(0.0, 1.0);
-      if (ring < 1) {
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(rect.inflate(4 + 6 * ring), _radius),
-          Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 3
-            ..color = Palette.accent.withValues(alpha: 0.6 * (1 - ring)),
-        );
-      }
-    }
   }
 
   /// One half of a cell: its card and the part of [ch] that falls in it.
@@ -272,7 +307,7 @@ class _BoardPainter extends CustomPainter {
       Paint()..color = color,
     );
     if (ch == ' ') return;
-    final g = ch == '?' ? f.ask : f.glyphs[ch]!;
+    final g = f.glyphs[ch]!;
     canvas.save();
     canvas.clipRect(half);
     // Caps centered on the hinge.
