@@ -228,7 +228,7 @@ final List<Slide> deck = [
   const Slide(
     HalfMillion('Half a million lines.\nOne person.\nOne month.'),
     section: Section.flutter,
-    notes: "Six months ago a whole team at SoFi adding 500K lines a quarter was a lot. Now I do 500K a month, by myself. The point isn't me; it's the tools.",
+    notes: "A year ago a whole team at SoFi adding 500K lines a quarter was a lot. Now I do 500K a month, by myself. The point isn't me; it's the tools.",
   ),
 
   // Reason 2
