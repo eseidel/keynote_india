@@ -11,7 +11,10 @@ import 'theme.dart';
 /// drawn by Flutter, sits under two sweeping stage lights. Hands go up across
 /// the room, eager ones first, a couple of people half-raise, think again,
 /// then commit. The first hand up is an eager one in the third row, right
-/// of center. Everyone waves a little, then holds still. Plays once and settles in under four seconds.
+/// of center. It's a real crowd: beanies, a backwards cap, headphones,
+/// buns and ponytails, a few Flutter logos on the backs of shirts, and one
+/// person filming it all on their phone. Everyone waves a little, then
+/// holds still. Plays once and settles in under four seconds.
 class ShowOfHands extends StatefulWidget {
   const ShowOfHands({super.key, required this.title, this.size = 40});
   final String title;
@@ -56,6 +59,18 @@ class _ShowOfHandsState extends State<ShowOfHands>
   );
 }
 
+/// What sits on a head, seen from behind.
+enum _Top { none, beanie, cap, headphones, bun, ponytail }
+
+/// A person's quirks, picked after the crowd's layout so it stays put.
+class _Look {
+  const _Look(this.top, this.color, {this.logo = false, this.phone = false});
+  final _Top top;
+  final Color color; // the hat's or headphones'
+  final bool logo; // a Flutter logo on the back of the shirt
+  final bool phone; // holding up a phone, filming, instead of a hand
+}
+
 /// One member of the audience, seen from behind.
 class _Person {
   _Person({
@@ -83,13 +98,7 @@ class _Person {
 class _Crowd {
   _Crowd() {
     final rng = math.Random(3);
-    // Back row to front: head radius, head height, spacing, haze.
-    const layout = [
-      (r: 21.0, hy: 520.0, sp: 68.0, haze: 0.55),
-      (r: 28.0, hy: 615.0, sp: 90.0, haze: 0.38),
-      (r: 37.0, hy: 740.0, sp: 118.0, haze: 0.2),
-      (r: 50.0, hy: 905.0, sp: 158.0, haze: 0.0),
-    ];
+    // Back row to front: head radius, head height, spacing, haze ([layout]).
     for (final (k, row) in layout.indexed) {
       final people = <_Person>[];
       final offset = (k.isOdd ? 0.5 : 0.0) * row.sp - 40;
@@ -183,7 +192,54 @@ class _Crowd {
       rows[3][10].x - eager.x > 300,
       'the front-row hesitant hand must stay clear of the eager one',
     );
+    // Quirks, from their own seed so the layout above doesn't move.
+    final q = math.Random(31);
+    for (final (k, row) in rows.indexed) {
+      for (final p in row) {
+        final roll = q.nextDouble();
+        final top = roll < 0.09
+            ? _Top.beanie
+            : roll < 0.15
+            ? _Top.cap
+            : roll < 0.22
+            ? _Top.headphones
+            : roll < 0.3
+            ? _Top.bun
+            : roll < 0.37
+            ? _Top.ponytail
+            : _Top.none;
+        Color haze(Color c) => Color.lerp(c, _hazeColor, layout[k].haze)!;
+        looks[p] = _Look(
+          top,
+          haze(_hats[q.nextInt(_hats.length)]),
+          logo: k >= 2 && q.nextDouble() < 0.16,
+        );
+      }
+    }
+    // Someone in the front row films it all.
+    final filmer = rows[3].firstWhere((p) => p.up != null && p.x > 400);
+    looks[filmer] = _Look(
+      looks[filmer]!.top,
+      looks[filmer]!.color,
+      phone: true,
+    );
   }
+
+  final looks = <_Person, _Look>{};
+  static const layout = [
+    (r: 21.0, hy: 520.0, sp: 68.0, haze: 0.55),
+    (r: 28.0, hy: 615.0, sp: 90.0, haze: 0.38),
+    (r: 37.0, hy: 740.0, sp: 118.0, haze: 0.2),
+    (r: 50.0, hy: 905.0, sp: 158.0, haze: 0.0),
+  ];
+  static const _hats = [
+    Color(0xFFF2545B),
+    Color(0xFFFFB259),
+    Color(0xFF27C4F5),
+    Color(0xFF3CCB7F),
+    Color(0xFF7C5CF2),
+    Color(0xFFE2559B),
+  ];
 
   static const _eagerX = 1290.0;
   static const _hazeColor = Color(0xFF1E2636);
@@ -375,8 +431,9 @@ class _CrowdPainter extends CustomPainter {
     double lean,
     double wave,
     Color sleeve,
-    Color skin,
-  ) {
+    Color skin, {
+    bool phone = false,
+  }) {
     if (u <= 0) return;
     // The hand rises from behind the shoulders to well above the head.
     final hidden = shoulder + Offset(side * 0.3 * r, 2.2 * r);
@@ -406,14 +463,40 @@ class _CrowdPainter extends CustomPainter {
       ..save()
       ..translate(hand.dx, hand.dy)
       ..rotate(math.atan2(d.dy, d.dx) + math.pi / 2 + wave)
-      ..scale(-side * r, r)
-      ..drawPath(_hand, _fill..color = skin)
-      ..restore();
+      ..scale(-side * r, r);
+    if (phone) {
+      // A phone held up to film the stage: we see its screen, recording.
+      final body = RRect.fromLTRBR(
+        -0.45,
+        -1.75,
+        0.45,
+        0.05,
+        const Radius.circular(0.14),
+      );
+      canvas
+        ..drawPath(_hand, _fill..color = skin)
+        ..drawRRect(body, _fill..color = const Color(0xFF0B0D12))
+        ..drawRRect(body.deflate(0.07), _fill..color = const Color(0xFF34506E))
+        // The stage, small, on the screen.
+        ..drawRect(
+          const Rect.fromLTRB(-0.3, -1.1, 0.3, -0.75),
+          _fill..color = Palette.statBlue.withValues(alpha: 0.7),
+        )
+        ..drawCircle(
+          const Offset(0.22, -1.48),
+          0.08,
+          _fill..color = const Color(0xFFF2545B),
+        );
+    } else {
+      canvas.drawPath(_hand, _fill..color = skin);
+    }
+    canvas.restore();
   }
 
   void _paintPerson(Canvas canvas, _Person p, double t) {
     final r = p.r;
     final u = _raise(p, t);
+    final look = crowd.looks[p]!;
     // The arm first, so the body hides where it comes from.
     _paintArm(
       canvas,
@@ -425,6 +508,7 @@ class _CrowdPainter extends CustomPainter {
       p.up == null ? 0 : _wave(_upAt(p), p.phase, t, 0.22, 1.4),
       p.shirt,
       p.skin,
+      phone: look.phone,
     );
     canvas.drawRRect(
       RRect.fromLTRBAndCorners(
@@ -437,11 +521,29 @@ class _CrowdPainter extends CustomPainter {
       ),
       _fill..color = p.shirt,
     );
+    if (look.logo) _paintLogo(canvas, Offset(p.x, p.hy + 2.6 * r), r);
     final head = Rect.fromCenter(
       center: Offset(p.x, p.hy),
       width: 1.8 * r,
       height: 2.1 * r,
     );
+    final hair = _fill..color = p.hair;
+    switch (look.top) {
+      case _Top.bun:
+        canvas.drawCircle(Offset(p.x, p.hy - 1.0 * r), 0.42 * r, hair);
+      case _Top.ponytail:
+        canvas.drawRRect(
+          RRect.fromLTRBR(
+            p.x - 0.24 * r,
+            p.hy + 0.2 * r,
+            p.x + 0.24 * r,
+            p.hy + 2.2 * r,
+            Radius.circular(0.24 * r),
+          ),
+          hair,
+        );
+      default:
+    }
     canvas
       ..drawOval(head, _fill..color = p.hair)
       // Rim light from the stage, along the top of the head.
@@ -454,7 +556,131 @@ class _CrowdPainter extends CustomPainter {
           ..strokeWidth = 0.09 * r
           ..color = Palette.soft.withValues(alpha: 0.22),
       );
+    _paintTop(canvas, p, look);
   }
+
+  /// A hat or headphones over the head (bun and ponytail go behind it).
+  void _paintTop(Canvas canvas, _Person p, _Look look) {
+    final r = p.r, x = p.x, y = p.hy;
+    final c = _fill..color = look.color;
+    switch (look.top) {
+      case _Top.beanie:
+        // Knit dome, a folded band, and a pompom.
+        canvas
+          ..drawArc(
+            Rect.fromCenter(
+              center: Offset(x, y),
+              width: 1.95 * r,
+              height: 2.2 * r,
+            ),
+            math.pi,
+            math.pi,
+            true,
+            c,
+          )
+          ..drawRRect(
+            RRect.fromLTRBR(
+              x - 1.0 * r,
+              y - 0.15 * r,
+              x + 1.0 * r,
+              y + 0.2 * r,
+              Radius.circular(0.15 * r),
+            ),
+            _fill
+              ..color = Color.lerp(look.color, const Color(0xFF000000), 0.2)!,
+          )
+          ..drawCircle(
+            Offset(x, y - 1.2 * r),
+            0.3 * r,
+            _fill..color = look.color,
+          );
+      case _Top.cap:
+        // Worn backwards: the crown, and the brim pointing back at us.
+        canvas
+          ..drawArc(
+            Rect.fromCenter(
+              center: Offset(x, y + 0.05 * r),
+              width: 1.9 * r,
+              height: 2.1 * r,
+            ),
+            math.pi,
+            math.pi,
+            true,
+            c,
+          )
+          ..drawArc(
+            Rect.fromCenter(
+              center: Offset(x, y + 0.05 * r),
+              width: 1.5 * r,
+              height: 0.7 * r,
+            ),
+            0,
+            math.pi,
+            true,
+            _fill
+              ..color = Color.lerp(look.color, const Color(0xFF000000), 0.3)!,
+          )
+          ..drawCircle(
+            Offset(x, y - 1.0 * r),
+            0.1 * r,
+            _fill
+              ..color = Color.lerp(look.color, const Color(0xFF000000), 0.3)!,
+          );
+      case _Top.headphones:
+        canvas.drawArc(
+          Rect.fromCenter(
+            center: Offset(x, y),
+            width: 2.0 * r,
+            height: 2.3 * r,
+          ),
+          math.pi,
+          math.pi,
+          false,
+          _stroke
+            ..color = look.color
+            ..strokeWidth = 0.16 * r,
+        );
+        for (final side in [-1.0, 1.0]) {
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(
+              Rect.fromCenter(
+                center: Offset(x + side * 0.98 * r, y + 0.15 * r),
+                width: 0.38 * r,
+                height: 0.7 * r,
+              ),
+              Radius.circular(0.16 * r),
+            ),
+            _fill..color = look.color,
+          );
+        }
+      default:
+    }
+  }
+
+  /// The Flutter logo, printed on the back of a shirt, [r] sized.
+  void _paintLogo(Canvas canvas, Offset at, double r) {
+    canvas
+      ..save()
+      ..translate(at.dx, at.dy)
+      ..scale(1.3 * r / 181)
+      ..translate(-83, -101);
+    final ink = _fill..color = Palette.accent.withValues(alpha: 0.55);
+    for (final beam in _flutterBeams) {
+      canvas.drawPath(beam, ink);
+    }
+    canvas.restore();
+  }
+
+  static final _flutterBeams = [
+    for (final pts in const [
+      [37.7, 128.9, 9.8, 101.0, 100.4, 10.4, 156.2, 10.4],
+      [156.2, 94.0, 100.4, 94.0, 51.6, 142.8, 79.5, 170.7],
+      [79.5, 170.7, 100.4, 191.6, 156.2, 191.6, 107.4, 142.8],
+    ])
+      Path()..addPolygon([
+        for (var k = 0; k < pts.length; k += 2) Offset(pts[k], pts[k + 1]),
+      ], true),
+  ];
 
   @override
   bool shouldRepaint(_CrowdPainter old) => old.crowd != crowd;
