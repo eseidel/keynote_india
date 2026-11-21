@@ -37,8 +37,8 @@ const _words = [
   'WIZARD',
 ];
 const _introMs = 900.0; // ENGINEER, before the first clatter
-const _clatterMs = 1250.0; // from a leg's start until every cell has landed
-const _holdMs = 1300.0; // each word, on show
+const _clatterMs = 850.0; // from a leg's start until every cell has landed
+const _holdMs = 800.0; // each word, on show
 const _cellW = 84.0, _cellH = 116.0, _gap = 10.0;
 const _boardW = _cells * _cellW + (_cells - 1) * _gap;
 
@@ -174,7 +174,7 @@ class _Flaps {
           for (var j = 0; j < flips; j++) 60 + 140 * math.pow(j / flips, 3),
         ];
         final start = legStart + r.nextDouble() * 60;
-        final land = legStart + 620 + i * 55 + r.nextDouble() * 40;
+        final land = legStart + 420 + i * 40 + r.nextDouble() * 30;
         final raw = gaps.fold(0.0, (a, b) => a + b);
         final stretch = (land - start) / raw;
         var at = start;
