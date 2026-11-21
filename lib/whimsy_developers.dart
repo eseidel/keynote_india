@@ -9,7 +9,8 @@ import 'theme.dart';
 /// "A lot more developers": one person stands up at the front, tagged
 /// "Flutter developer". Then the room fills: 10, 100, then a crowd of about
 /// a thousand rising row by row back to the horizon, the far rows just dots.
-/// Tags pop up over a few of them, and none of the new ones say Flutter:
+/// Everyone has a laptop open, a sea of glowing Flutter-blue logos: they're
+/// all building. Tags pop up over a few of them, and none of the new ones say Flutter:
 /// designer, founder, PM, student... Pairs with the app icons on the slide
 /// before. Runs once when the slide appears and settles in about four seconds.
 class DevelopersSlide extends StatefulWidget {
@@ -242,7 +243,9 @@ class _CrowdPainter extends CustomPainter {
         if (p.hair != null && p.h > 12) i,
     ];
     _hairy = hairy;
-    final n = people.length * 2 + hairy.length;
+    // Per person, in order: body, laptop base, lid, logo; then every head;
+    // then every hair cap.
+    final n = people.length * 5 + hairy.length;
     _xforms = Float32List(n * 4);
     _colors = Int32List(n);
     _rects = Float32List(n * 4);
@@ -263,6 +266,9 @@ class _CrowdPainter extends CustomPainter {
     _levels = [for (final p in people) _levelFor(p.h)];
     for (final l in _levels) {
       rect(0, l);
+      rect(5, l);
+      rect(3, l);
+      rect(4, l);
     }
     for (final l in _levels) {
       rect(1, l);
@@ -275,6 +281,9 @@ class _CrowdPainter extends CustomPainter {
     q = 0;
     for (final p in people) {
       _rgb[q++] = _opaque(Color.lerp(Palette.background, p.shirt, 0.85)!);
+      _rgb[q++] = _opaque(_base);
+      _rgb[q++] = _opaque(_lid);
+      _rgb[q++] = _opaque(Palette.accent);
     }
     for (final p in people) {
       _rgb[q++] = _opaque(p.skin);
@@ -323,6 +332,9 @@ class _CrowdPainter extends CustomPainter {
     }
   }
 
+  static const _lid = Color(0xFFC3CCD8); // a silver laptop, seen from behind
+  static const _base = Color(0xFF7E8898); // its keyboard half, edge on
+
   static int _opaque(Color c) => c.toARGB32() & 0xFFFFFF;
 
   /// Sprite sizes: the reference h each level is drawn at. A person uses the
@@ -335,6 +347,9 @@ class _CrowdPainter extends CustomPainter {
     Rect.fromLTRB(-0.3, -0.42, 0.3, 0.4), // body
     Rect.fromLTRB(-0.17, -0.77, 0.17, -0.43), // head
     Rect.fromLTRB(-0.1768, -0.7768, 0.1768, -0.4232), // hair cap
+    Rect.fromLTRB(-0.22, -0.24, 0.22, 0.08), // laptop lid, at the chest
+    Rect.fromLTRB(-0.045, -0.125, 0.045, -0.035), // the lid's logo
+    Rect.fromLTRB(-0.27, 0.06, 0.27, 0.12), // the keyboard half, edge on
   ];
 
   /// Atlas source rects, [level][part], including padding.
@@ -396,6 +411,30 @@ class _CrowdPainter extends CustomPainter {
             );
           case 1:
             c.drawCircle(centre, r, white);
+          case 3:
+            c.drawRRect(
+              RRect.fromLTRBR(
+                -h * 0.22,
+                -h * 0.24,
+                h * 0.22,
+                h * 0.08,
+                Radius.circular(h * 0.03),
+              ),
+              white,
+            );
+          case 4:
+            c.drawCircle(Offset(0, -h * 0.08), h * 0.045, white);
+          case 5:
+            c.drawRRect(
+              RRect.fromLTRBR(
+                -h * 0.27,
+                h * 0.06,
+                h * 0.27,
+                h * 0.12,
+                Radius.circular(h * 0.02),
+              ),
+              white,
+            );
           case 2:
             c.drawArc(
               Rect.fromCircle(center: centre, radius: r * 1.04),
@@ -424,7 +463,7 @@ class _CrowdPainter extends CustomPainter {
     final people = crowd.people;
     final n = people.length;
     final x = _xforms, col = _colors, rgb = _rgb;
-    var hq = 2 * n; // next hair quad
+    var hq = 5 * n; // next hair quad
     var hairIndex = 0;
     for (var i = 0; i < n; i++) {
       final p = people[i];
@@ -453,8 +492,11 @@ class _CrowdPainter extends CustomPainter {
         col[q] = (alpha << 24) | rgb[q];
       }
 
-      put(i, 0);
-      put(n + i, 1);
+      put(4 * i, 0);
+      put(4 * i + 1, 5);
+      put(4 * i + 2, 3);
+      put(4 * i + 3, 4);
+      put(4 * n + i, 1);
       if (hasHair) {
         put(hq++, 2);
         hairIndex++;
