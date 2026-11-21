@@ -8,8 +8,8 @@ import 'package:flutter/material.dart';
 /// from the brand logo SVG, standing in for the logo's own bird) sits a
 /// beat, crouches, takes off, flaps up and over in an arc, and lands on the
 /// first of [perches] (the right stem of the "u" in "Thank you"), growing a
-/// little as it comes forward. The slide stays up a long time, so every
-/// [_stay] it flies on: to the next perch (the k), then home to the logo,
+/// little as it comes forward. The slide stays up a long time, so after a
+/// while (5 to 20 seconds, at random) it flies on: to the next perch (the k), then home to the logo,
 /// then round again. Positioned in the title's coordinates; [logo] is the
 /// logo image's top left there.
 class LandingBird extends StatefulWidget {
@@ -31,8 +31,10 @@ class LandingBird extends StatefulWidget {
   State<LandingBird> createState() => _LandingBirdState();
 }
 
-/// How long the bird stays on each spot before flying to the next.
-const _stay = Duration(seconds: 20);
+/// How long the bird stays on each spot before flying to the next: a
+/// random 5 to 20 seconds, so it doesn't feel like clockwork.
+Duration _stay(math.Random r) =>
+    Duration(milliseconds: 5000 + r.nextInt(15000));
 
 class _LandingBirdState extends State<LandingBird>
     with SingleTickerProviderStateMixin {
@@ -41,6 +43,7 @@ class _LandingBirdState extends State<LandingBird>
     duration: const Duration(milliseconds: 3600),
   )..forward();
   Timer? _next;
+  final _random = math.Random();
   int _leg = 0; // flights so far: from spot _leg to spot _leg + 1
 
   /// The logo, then each perch; the bird cycles through them.
@@ -54,7 +57,7 @@ class _LandingBirdState extends State<LandingBird>
     super.initState();
     _flight.addStatusListener((s) {
       if (s != AnimationStatus.completed) return;
-      _next = Timer(_stay, () {
+      _next = Timer(_stay(_random), () {
         if (!mounted) return;
         setState(() => _leg++);
         _flight.forward(from: 0);
