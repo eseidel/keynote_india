@@ -549,7 +549,7 @@ final List<Slide> deck = [
     Cover(
       title: 'Thank you',
       logo: img('g3b572bde633_0_186.png'),
-      logoOverlay: (perch, logo) => LandingBird(perch: perch, logo: logo),
+      logoOverlay: (perches, logo) => LandingBird(perches: perches, logo: logo),
       contact: 'eric@shorebird.dev',
     ),
     cover: true,

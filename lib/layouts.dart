@@ -111,11 +111,12 @@ class Cover extends StatelessWidget {
   final String? logo;
 
   /// Builds a widget over the title, unclipped, in the title's coordinates,
-  /// given the top of the title's last letter (the Thank you slide's bird
-  /// lands there) and the logo's top left. With an overlay, the logo's own
+  /// given perches on the title (the top of its last letter, then the top
+  /// of its last ascender, such as the k in "Thank": the Thank you slide's
+  /// bird lands on each in turn) and the logo's top left. With an overlay, the logo's own
   /// bird (its left [LandingBird.logoBirdWidth]) is hidden: the overlay's
   /// bird stands in for it.
-  final Widget Function(Offset perch, Offset logo)? logoOverlay;
+  final Widget Function(List<Offset> perches, Offset logo)? logoOverlay;
 
   /// The title, with [logoOverlay] placed relative to its last letter.
   Widget _withPerch(TextStyle style) {
@@ -123,24 +124,31 @@ class Cover extends StatelessWidget {
       text: TextSpan(text: title, style: style),
       textDirection: TextDirection.ltr,
     )..layout();
-    final last = tp
-        .getBoxesForSelection(
-          TextSelection(
-            baseOffset: title.length - 1,
-            extentOffset: title.length,
-          ),
-        )
+    TextBox box(int i) => tp
+        .getBoxesForSelection(TextSelection(baseOffset: i, extentOffset: i + 1))
         .first;
+    final last = box(title.length - 1);
     final metrics = tp.computeLineMetrics().first;
     // The top of a lowercase letter: the baseline minus about half the ascent.
     final top = metrics.baseline - metrics.ascent * 0.47;
     // The far right of the letter: over the u's right stem.
-    final perch = Offset(last.right - (last.right - last.left) * 0.2, top);
+    final perches = [Offset(last.right - (last.right - last.left) * 0.2, top)];
+    // The last ascender (b d f h k l t), on its stem, at ascender height.
+    final tall = title.lastIndexOf(RegExp('[bdfhklt]'));
+    if (tall > 0) {
+      final b = box(tall);
+      perches.add(
+        Offset(
+          b.left + (b.right - b.left) * 0.3,
+          metrics.baseline - metrics.ascent * 0.7,
+        ),
+      );
+    }
     return Stack(
       clipBehavior: Clip.none,
       children: [
         Text(title, style: style),
-        logoOverlay!(perch, const Offset(0, -(_logoHeight + _logoGap))),
+        logoOverlay!(perches, const Offset(0, -(_logoHeight + _logoGap))),
       ],
     );
   }

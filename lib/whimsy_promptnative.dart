@@ -76,7 +76,10 @@ class _Labels {
   /// The big question mark, laid out once; it's scaled with the canvas,
   /// never by font size (Impeller's glyph atlas).
   late final TextPainter question = TextPainter(
-    text: TextSpan(text: '?', style: headline(100, color: Palette.accent)),
+    text: TextSpan(
+      text: '?',
+      style: headline(100, color: Palette.accent),
+    ),
     textDirection: TextDirection.ltr,
   )..layout();
 
